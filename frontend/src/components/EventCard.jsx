@@ -19,7 +19,7 @@ const statusColors = {
   cancelled: 'bg-red-100 text-red-700',
 };
 
-export default function EventCard({ event }) {
+export default function EventCard({ event, hoverClassName = '', onMouseEnter, onMouseLeave }) {
   const spotsLeft = event.capacity - (event.registeredCount || 0);
   const isFull = spotsLeft <= 0;
   const isLow = spotsLeft > 0 && spotsLeft <= 10;
@@ -30,7 +30,7 @@ export default function EventCard({ event }) {
   const displayTime = event.endTime ? `${event.startTime} - ${event.endTime}` : event.startTime || event.time;
 
   return (
-    <Link to={`/events/${event._id}`} className="card group hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 flex flex-col">
+    <Link to={`/events/${event._id}`} className={`card group hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 flex flex-col ${hoverClassName}`} onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
       {/* Image */}
       <div className="relative h-44 bg-gradient-to-br from-primary-100 to-primary-50 overflow-hidden">
         {event.imageUrl ? (

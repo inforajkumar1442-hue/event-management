@@ -136,9 +136,10 @@ export default function Home() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {events.map(event => (
-                <div
+                <EventCard
                   key={event._id}
-                  className={`transition-all duration-300 ${
+                  event={event}
+                  hoverClassName={`transition-all duration-300 ${
                     hoveredEvent === event._id
                       ? 'scale-105 -translate-y-2 shadow-xl z-10 relative'
                       : hoveredEvent !== null
@@ -147,9 +148,7 @@ export default function Home() {
                   }`}
                   onMouseEnter={() => setHoveredEvent(event._id)}
                   onMouseLeave={() => setHoveredEvent(null)}
-                >
-                  <EventCard event={event} />
-                </div>
+                />
               ))}
             </div>
             <div className="text-center mt-8 sm:hidden">

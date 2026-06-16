@@ -17,6 +17,7 @@ export default function Events() {
   const [status, setStatus] = useState('upcoming');
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({});
+  const [hoveredEvent, setHoveredEvent] = useState(null);
 
   // Fetch events function - wrapped in useCallback
   const fetchEvents = useCallback(async (search, cat, stat, pageNum) => {
@@ -220,7 +221,21 @@ export default function Events() {
       {/* Events Grid */}
       {!loading && events.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {events.map(event => <EventCard key={event._id} event={event} />)}
+          {events.map(event => (
+            <EventCard
+              key={event._id}
+              event={event}
+              hoverClassName={`transition-all duration-300 ${
+                hoveredEvent === event._id
+                  ? 'scale-105 -translate-y-2 shadow-xl z-10 relative'
+                  : hoveredEvent !== null
+                    ? 'opacity-50 scale-95'
+                    : ''
+              }`}
+              onMouseEnter={() => setHoveredEvent(event._id)}
+              onMouseLeave={() => setHoveredEvent(null)}
+            />
+          ))}
         </div>
       )}
 
