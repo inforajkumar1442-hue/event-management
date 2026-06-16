@@ -1,7 +1,9 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : '/api',
+  baseURL: import.meta.env.PROD
+    ? 'https://event-management-a7l9.onrender.com/api'
+    : '/api',
   headers: { 'Content-Type': 'application/json' },
 });
 
