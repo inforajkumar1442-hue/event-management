@@ -275,8 +275,6 @@ eventSchema.index({ endDate: 1, status: 1 });
 eventSchema.index({ isPublished: 1, status: 1, startDate: 1 });
 eventSchema.index({ createdAt: -1 });
 eventSchema.index({ isDeleted: 1, status: 1, startDate: -1 }); // For soft delete queries
-eventSchema.index({ createdBy: 1, startDate: -1 }); // For user's events
-eventSchema.index({ isPublished: 1, status: 1, startDate: 1 }); // For public event listing
 
 // Soft delete indexes
 eventSchema.index({ isDeleted: 1, status: 1 });
