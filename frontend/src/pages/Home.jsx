@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Calendar, Users, Zap, Shield, ArrowRight, Star, Phone } from 'lucide-react';
 import EventCard from '../components/EventCard';
+import AnimatedCounter from '../components/AnimatedCounter';
 import api from '../api/axios';
 import { SiGmail } from "react-icons/si";
 
@@ -62,7 +63,7 @@ export default function Home() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 text-center">
             {stats.map(s => (
               <div key={s.label}>
-                <div className="font-display font-bold text-3xl text-primary-600">{s.value}</div>
+                <div className="font-display font-bold text-3xl text-primary-600"><AnimatedCounter value={s.value} /></div>
                 <div className="text-slate-500 text-sm mt-1">{s.label}</div>
               </div>
             ))}
