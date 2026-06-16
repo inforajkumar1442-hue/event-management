@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Calendar, Users, Zap, Shield, ArrowRight, Star, Phone } from 'lucide-react';
 import EventCard from '../components/EventCard';
@@ -25,6 +25,23 @@ export default function Home() {
   const [events, setEvents] = useState([]);
   const [hoveredFeature, setHoveredFeature] = useState(null);
   const [hoveredEvent, setHoveredEvent] = useState(null);
+  const [ctaVisible, setCtaVisible] = useState(false);
+  const ctaRef = useRef(null);
+
+  useEffect(() => {
+    if (!ctaRef.current) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setCtaVisible(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.3 }
+    );
+    observer.observe(ctaRef.current);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     api.get('/events', { params: { limit: 4, status: 'upcoming', sort: '-startDate' } })
@@ -50,10 +67,10 @@ export default function Home() {
             From tech workshops to cultural fests — find, register, and experience events that matter to you.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link to="/events" className="inline-flex items-center justify-center gap-2 bg-white text-primary-700 hover:bg-primary-50 font-bold px-8 py-3.5 rounded-2xl transition-all shadow-lg hover:shadow-xl">
+            <Link to="/events" className="inline-flex items-center justify-center gap-2 bg-white text-primary-700 hover:bg-primary-50 font-bold px-8 py-3.5 rounded-2xl transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105">
               Browse Events <ArrowRight className="w-4 h-4" />
             </Link>
-            <Link to="/register" className="inline-flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 border border-white/30 font-semibold px-8 py-3.5 rounded-2xl transition-all backdrop-blur-sm">
+            <Link to="/register" className="inline-flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 border border-white/30 font-semibold px-8 py-3.5 rounded-2xl transition-all duration-300 backdrop-blur-sm hover:scale-105 hover:shadow-xl hover:shadow-white/20">
               Create Account
             </Link>
           </div>
@@ -145,11 +162,15 @@ export default function Home() {
       )}
 
       {/* CTA */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 py-20">
-        <div className="bg-gradient-to-br from-primary-600 to-primary-800 rounded-3xl text-white text-center px-8 py-16">
+      <section ref={ctaRef} className="max-w-7xl mx-auto px-4 sm:px-6 py-20">
+        <div
+          className={`bg-gradient-to-br from-primary-600 to-primary-800 rounded-3xl text-white text-center px-8 py-16 transition-all duration-700 ease-out ${
+            ctaVisible ? 'scale-100 opacity-100 translate-y-0' : 'scale-90 opacity-0 translate-y-4'
+          }`}
+        >
           <h2 className="font-display font-bold text-4xl mb-4">Ready to get started?</h2>
           <p className="text-primary-100 text-lg mb-8 max-w-xl mx-auto">Join thousands of attendees discovering amazing events every day.</p>
-          <Link to="/register" className="inline-flex items-center gap-2 bg-white text-primary-700 font-bold px-8 py-3.5 rounded-2xl hover:bg-primary-50 transition-all shadow-lg">
+          <Link to="/register" className="inline-flex items-center gap-2 bg-white text-primary-700 font-bold px-8 py-3.5 rounded-2xl hover:bg-primary-50 hover:scale-105 hover:shadow-xl transition-all duration-300 shadow-lg">
             Create free account <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
