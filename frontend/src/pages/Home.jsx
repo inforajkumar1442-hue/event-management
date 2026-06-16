@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Calendar, Users, Zap, Shield, ArrowRight, Star, Phone } from 'lucide-react';
 import EventCard from '../components/EventCard';
 import AnimatedCounter from '../components/AnimatedCounter';
+import FontSwitcher from '../components/FontSwitcher';
 import api from '../api/axios';
 import { SiGmail } from "react-icons/si";
 
@@ -41,7 +42,7 @@ export default function Home() {
           </div>
           <h1 className="font-display font-bold text-5xl sm:text-6xl lg:text-7xl mb-6 leading-tight">
             Discover & Attend<br />
-            <span className="text-amber-300">Amazing Events</span>
+            <FontSwitcher text="Amazing Events" />
           </h1>
           <p className="text-primary-100 text-xl max-w-2xl mx-auto mb-10">
             From tech workshops to cultural fests — find, register, and experience events that matter to you.
