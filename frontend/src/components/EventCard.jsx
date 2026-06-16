@@ -24,6 +24,12 @@ export default function EventCard({ event, hoverClassName = '', onMouseEnter, on
   const isFull = spotsLeft <= 0;
   const isLow = spotsLeft > 0 && spotsLeft <= 10;
 
+  const imageUrl = event.imageUrl?.startsWith('http')
+    ? event.imageUrl
+    : import.meta.env.PROD
+      ? `https://event-management-a7l9.onrender.com${event.imageUrl}`
+      : event.imageUrl;
+
   // Handle date formatting
   const startDate = event.startDate || event.date;
   const endDate = event.endDate;
@@ -35,7 +41,7 @@ export default function EventCard({ event, hoverClassName = '', onMouseEnter, on
       <div className="relative h-44 bg-gradient-to-br from-primary-100 to-primary-50 overflow-hidden">
         {event.imageUrl ? (
           <img
-            src={event.imageUrl}
+            src={imageUrl}
             alt={event.title}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           />

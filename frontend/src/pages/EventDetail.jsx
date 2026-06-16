@@ -124,6 +124,12 @@ export default function EventDetail() {
 
   if (!event) return null;
 
+  const imageUrl = event.imageUrl?.startsWith('http')
+    ? event.imageUrl
+    : import.meta.env.PROD
+      ? `https://event-management-a7l9.onrender.com${event.imageUrl}`
+      : event.imageUrl;
+
   const spotsLeft = event.capacity - (event.registeredCount || 0);
   const isFull = spotsLeft <= 0;
   const isRegistered = registration && ['confirmed', 'waitlisted', 'attended'].includes(registration.status);
@@ -143,7 +149,7 @@ export default function EventDetail() {
           {/* Hero Image */}
           <div className="relative h-64 sm:h-80 rounded-2xl overflow-hidden bg-gradient-to-br from-primary-100 to-primary-50">
             {event.imageUrl ? (
-              <img src={event.imageUrl} alt={event.title} className="w-full h-full object-cover" />
+              <img src={imageUrl} alt={event.title} className="w-full h-full object-cover" />
             ) : (
               <div className="w-full h-full flex items-center justify-center">
                 <Calendar className="w-24 h-24 text-primary-200" />
