@@ -61,7 +61,7 @@ const corsOptions = {
     
     // In development, allow localhost origins only (not any random origin)
     if (process.env.NODE_ENV === 'development') {
-      if (origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1')) {
+      if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
         console.log(`⚠️ CORS: Allowing localhost origin ${origin} in development mode`);
         return callback(null, true);
       }
@@ -293,7 +293,10 @@ const startServer = async () => {
     validateEnv();
 
     // Connect to MongoDB
-    await mongoose.connect(process.env.MONGO_URI);
+    await mongoose.connect(process.env.MONGO_URI, {
+      serverSelectionTimeoutMS: 5000,
+      connectTimeoutMS: 10000,
+    });
     logger.info('✅ MongoDB connected successfully');
 
     // Create indexes if they don't exist

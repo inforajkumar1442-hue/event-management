@@ -42,7 +42,8 @@ export const login = async (req, res) => {
     return res.status(400).json({ errors: errors.array() });
   }
 
-  const { email, password } = req.body;
+  const email = req.body.email?.toLowerCase().trim();
+  const password = req.body.password;
 
   // First, check if user exists with this email
   const user = await User.findOne({ email }).select('+password');
