@@ -23,6 +23,8 @@ const stats = [
 
 export default function Home() {
   const [events, setEvents] = useState([]);
+  const [hoveredFeature, setHoveredFeature] = useState(null);
+  const [hoveredEvent, setHoveredEvent] = useState(null);
 
   useEffect(() => {
     api.get('/events', { params: { limit: 4, status: 'upcoming', sort: '-startDate' } })
@@ -80,7 +82,18 @@ export default function Home() {
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {features.map(f => (
-            <div key={f.title} className="card p-6 text-center hover:shadow-md transition-shadow">
+            <div
+              key={f.title}
+              className={`card p-6 text-center transition-all duration-300 cursor-pointer ${
+                hoveredFeature === f.title
+                  ? 'scale-105 -translate-y-2 shadow-xl'
+                  : hoveredFeature !== null
+                    ? 'opacity-50 scale-95'
+                    : ''
+              }`}
+              onMouseEnter={() => setHoveredFeature(f.title)}
+              onMouseLeave={() => setHoveredFeature(null)}
+            >
               <div className="w-12 h-12 bg-primary-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <f.icon className="w-6 h-6 text-primary-600" />
               </div>
@@ -105,7 +118,22 @@ export default function Home() {
               </Link>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {events.map(event => <EventCard key={event._id} event={event} />)}
+              {events.map(event => (
+                <div
+                  key={event._id}
+                  className={`transition-all duration-300 ${
+                    hoveredEvent === event._id
+                      ? 'scale-105 -translate-y-2 shadow-xl z-10 relative'
+                      : hoveredEvent !== null
+                        ? 'opacity-50 scale-95'
+                        : ''
+                  }`}
+                  onMouseEnter={() => setHoveredEvent(event._id)}
+                  onMouseLeave={() => setHoveredEvent(null)}
+                >
+                  <EventCard event={event} />
+                </div>
+              ))}
             </div>
             <div className="text-center mt-8 sm:hidden">
               <Link to="/events" className="btn-primary inline-flex items-center gap-2">
