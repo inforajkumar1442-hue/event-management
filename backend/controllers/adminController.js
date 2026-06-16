@@ -96,103 +96,140 @@ export const toggleStaffStatus = async (req, res) => {
 
 // @GET /api/admin/users
 export const getAllUsers = async (req, res) => {
-  const { page = 1, limit = 20, search, role } = req.query;
-  const query = {};
-  if (search) {
-    query.$or = [
-      { name:  { $regex: search, $options: 'i' } },
-      { email: { $regex: search, $options: 'i' } },
-    ];
+  try {
+    const { page = 1, limit = 20, search, role } = req.query;
+    const query = {};
+    if (search) {
+      query.$or = [
+        { name:  { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+      ];
+    }
+    if (role) query.role = role;
+
+    const total = await User.countDocuments(query);
+    const users = await User.find(query)
+      .sort('-createdAt')
+      .skip((page - 1) * limit)
+      .limit(parseInt(limit));
+
+    res.json({ users, total });
+  } catch (error) {
+    logger.error('Error fetching users:', error);
+    res.status(500).json({ message: 'Failed to fetch users' });
   }
-  if (role) query.role = role;
-
-  const total = await User.countDocuments(query);
-  const users = await User.find(query)
-    .sort('-createdAt')
-    .skip((page - 1) * limit)
-    .limit(parseInt(limit));
-
-  res.json({ users, total });
 };
 
 // @PUT /api/admin/users/:id/toggle
 export const toggleUserStatus = async (req, res) => {
-  const user = await User.findById(req.params.id);
-  if (!user) return res.status(404).json({ message: 'User not found' });
-  if (user.role === 'admin') return res.status(403).json({ message: 'Cannot deactivate admin' });
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    if (user.role === 'admin') return res.status(403).json({ message: 'Cannot deactivate admin' });
 
-  user.isActive = !user.isActive;
-  await user.save();
-  res.json({ message: `User ${user.isActive ? 'activated' : 'deactivated'}`, user });
+    user.isActive = !user.isActive;
+    await user.save();
+    res.json({ message: `User ${user.isActive ? 'activated' : 'deactivated'}`, user });
+  } catch (error) {
+    logger.error('Error toggling user status:', error);
+    res.status(500).json({ message: 'Failed to toggle user status' });
+  }
 };
 
 // @PUT /api/admin/users/:id/role
 export const changeUserRole = async (req, res) => {
-  const { role } = req.body;
-  const user = await User.findByIdAndUpdate(req.params.id, { role }, { new: true });
-  if (!user) return res.status(404).json({ message: 'User not found' });
-  res.json({ message: 'Role updated', user });
+  try {
+    const { role } = req.body;
+    const user = await User.findByIdAndUpdate(req.params.id, { role }, { new: true });
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    res.json({ message: 'Role updated', user });
+  } catch (error) {
+    logger.error('Error changing user role:', error);
+    res.status(500).json({ message: 'Failed to change user role' });
+  }
 };
 
 // @GET /api/admin/events/:id/registrations
 export const getEventRegistrations = async (req, res) => {
-  const { status } = req.query;
-  const query = { event: req.params.id };
-  if (status) query.status = status;
+  try {
+    const { status } = req.query;
+    const query = { event: req.params.id };
+    if (status) query.status = status;
 
-  const registrations = await Registration.find(query)
-    .populate('user', 'name email department phone')
-    .populate('event', 'title startDate venue')   // ← consistent field name
-    .sort('-createdAt');
+    const registrations = await Registration.find(query)
+      .populate('user', 'name email department phone')
+      .populate('event', 'title startDate venue')
+      .sort('-createdAt');
 
-  res.json({ registrations, total: registrations.length });
+    res.json({ registrations, total: registrations.length });
+  } catch (error) {
+    logger.error('Error fetching event registrations:', error);
+    res.status(500).json({ message: 'Failed to fetch registrations' });
+  }
 };
 
 // @GET /api/admin/events/:id/export
 // Auth is verified via the Authorization header (Bearer token) — no query-param token needed.
 export const exportEventRegistrations = async (req, res) => {
-  const registrations = await Registration.find({ event: req.params.id })
-    .populate('user', 'name email department phone')
-    .populate('event', 'title startDate venue')   // ← fixed field
-    .lean();
+  try {
+    const registrations = await Registration.find({ event: req.params.id })
+      .populate('user', 'name email department phone')
+      .populate('event', 'title startDate venue')
+      .lean();
 
-  const csv = exportRegistrationsToCSV(registrations);
-  const event = await Event.findById(req.params.id);
+    const csv = exportRegistrationsToCSV(registrations);
+    const event = await Event.findById(req.params.id);
 
-  res.setHeader('Content-Type', 'text/csv');
-  res.setHeader(
-    'Content-Disposition',
-    `attachment; filename="${event?.title || 'event'}-registrations.csv"`,
-  );
-  res.send(csv);
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${event?.title || 'event'}-registrations.csv"`,
+    );
+    res.send(csv);
+  } catch (error) {
+    logger.error('Error exporting registrations:', error);
+    res.status(500).json({ message: 'Failed to export registrations' });
+  }
 };
 
 // @POST /api/admin/events/:id/send-reminder
 export const sendEventReminderToAll = async (req, res) => {
-  const event = await Event.findById(req.params.id);
-  if (!event) return res.status(404).json({ message: 'Event not found' });
+  try {
+    const event = await Event.findById(req.params.id);
+    if (!event) return res.status(404).json({ message: 'Event not found' });
 
-  const registrations = await Registration.find({ event: req.params.id, status: 'confirmed' })
-    .populate('user', 'name email');
+    const registrations = await Registration.find({ event: req.params.id, status: 'confirmed' })
+      .populate('user', 'name email');
 
-  Promise.all(
-    registrations.map(reg =>
-      sendEventReminder({ to: reg.user.email, userName: reg.user.name, event }),
-    ),
-  ).catch(console.error);
+    await Promise.all(
+      registrations.map(reg =>
+        sendEventReminder({ to: reg.user.email, userName: reg.user.name, event }),
+      ),
+    );
 
-  res.json({ message: `Reminders sent to ${registrations.length} attendees` });
+    logger.info(`Reminders sent to ${registrations.length} attendees for event: ${event.title}`);
+    res.json({ message: `Reminders sent to ${registrations.length} attendees` });
+  } catch (error) {
+    logger.error('Error sending reminders:', error);
+    res.status(500).json({ message: 'Failed to send reminders' });
+  }
 };
 
 // @DELETE /api/admin/users/:id
 export const deleteUser = async (req, res) => {
-  const user = await User.findById(req.params.id);
-  if (!user) return res.status(404).json({ message: 'User not found' });
-  if (user.role === 'admin') return res.status(403).json({ message: 'Cannot delete admin' });
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    if (user.role === 'admin') return res.status(403).json({ message: 'Cannot delete admin' });
 
-  await Registration.deleteMany({ user: req.params.id });
-  await user.deleteOne();
-  res.json({ message: 'User deleted' });
+    await Registration.deleteMany({ user: req.params.id });
+    await user.deleteOne();
+    logger.info(`User deleted: ${user.email}`);
+    res.json({ message: 'User deleted' });
+  } catch (error) {
+    logger.error('Error deleting user:', error);
+    res.status(500).json({ message: 'Failed to delete user' });
+  }
 };
 
 // Create a new staff member (admin only)

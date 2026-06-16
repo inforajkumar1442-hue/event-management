@@ -240,17 +240,24 @@ export const getStaffStats = async (req, res) => {
       isPublished: true
     });
 
-    let totalAttendees = 0;
-    let checkedInCount = 0;
+    const stats = await Registration.aggregate([
+      {
+        $match: {
+          event: { $in: todayEvents.map(e => e._id) },
+          status: { $in: ['confirmed', 'attended'] }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          totalAttendees: { $sum: 1 },
+          checkedInCount: { $sum: { $cond: ['$checkedIn', 1, 0] } }
+        }
+      }
+    ]);
 
-    for (const event of todayEvents) {
-      const registrations = await Registration.find({
-        event: event._id,
-        status: { $in: ['confirmed', 'attended'] }
-      });
-      totalAttendees += registrations.length;
-      checkedInCount += registrations.filter(r => r.checkedIn).length;
-    }
+    const totalAttendees = stats[0]?.totalAttendees || 0;
+    const checkedInCount = stats[0]?.checkedInCount || 0;
 
     res.json({
       success: true,

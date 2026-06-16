@@ -179,9 +179,13 @@ export const deleteEvent = async (req, res) => {
 
 // @GET /api/events/categories/list
 export const getCategories = async (req, res) => {
-  const categories = ['Workshop', 'Seminar', 'Conference', 'Cultural', 'Sports', 'Technical', 'Other'];
-  logger.debug('Categories list requested');
-  res.json({ categories });
+  try {
+    const categories = ['Workshop', 'Seminar', 'Conference', 'Cultural', 'Sports', 'Technical', 'Other'];
+    res.json({ categories });
+  } catch (error) {
+    logger.error('Error fetching categories:', error);
+    res.status(500).json({ message: 'Error fetching categories' });
+  }
 };
 
 // @PUT /api/events/:id/status  (Admin only)

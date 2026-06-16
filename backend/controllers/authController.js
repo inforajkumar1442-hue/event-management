@@ -3,6 +3,7 @@ import { validationResult } from 'express-validator';
 import User from '../models/User.js';
 import { generateToken } from '../middleware/auth.js';
 import { sendPasswordResetEmail } from '../utils/email.js';
+import logger from '../utils/logger.js';
 
 
 // @POST /api/auth/register
@@ -85,25 +86,37 @@ export const login = async (req, res) => {
 
 // @GET /api/auth/me
 export const getMe = async (req, res) => {
-  const user = await User.findById(req.user._id);
-  res.json({ user });
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    res.json({ user });
+  } catch (error) {
+    logger.error('Error fetching user:', error);
+    res.status(500).json({ message: 'Error fetching user' });
+  }
 };
 
 // @PUT /api/auth/profile
 export const updateProfile = async (req, res) => {
-  const { name, department, phone } = req.body;
-  const updates = { name, department, phone };
+  try {
+    const { name, department, phone } = req.body;
+    const updates = { name, department, phone };
 
-  if (req.file) {
-    updates.profilePicture = `/uploads/${req.file.filename}`;
+    if (req.file) {
+      updates.profilePicture = `/uploads/${req.file.filename}`;
+    }
+
+    const user = await User.findByIdAndUpdate(req.user._id, updates, {
+      new: true,
+      runValidators: true,
+    });
+
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    res.json({ message: 'Profile updated', user });
+  } catch (error) {
+    logger.error('Error updating profile:', error);
+    res.status(500).json({ message: 'Error updating profile' });
   }
-
-  const user = await User.findByIdAndUpdate(req.user._id, updates, {
-    new: true,
-    runValidators: true,
-  });
-
-  res.json({ message: 'Profile updated', user });
 };
 
 // @PUT /api/auth/change-password

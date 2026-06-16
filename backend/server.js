@@ -114,7 +114,7 @@ app.use('/api/', globalLimiter);
 // Auth specific stricter rate limiter
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 50, // Increased from 5 to 50 for testing
+  max: 10,
   skipSuccessfulRequests: true,
   message: { message: 'Too many login attempts, please try again later.' },
   standardHeaders: true,
