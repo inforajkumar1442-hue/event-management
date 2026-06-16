@@ -1,0 +1,55 @@
+{
+  "name": "event-management-backend",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "admin:seeder": "node ./seeder/Adminseeder.js",
+    "create-indexes": "node ./scripts/createIndexes.js",
+    "cleanup:uploads": "node ./scripts/cleanupUploads.js",
+    "cleanup:payments": "node ./scripts/cleanupPendingPayments.js",
+    "logs:clean": "node ./scripts/cleanupLogs.js",
+    "db:backup": "node ./scripts/backupDatabase.js",
+    "db:seed": "node ./seeder/seedEvents.js",
+    "health:check": "node ./scripts/healthCheck.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "compression": "^1.8.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "express": "^4.18.2",
+    "express-rate-limit": "^7.1.5",
+    "express-validator": "^7.0.1",
+    "helmet": "^7.1.0",
+    "json2csv": "^6.0.0-alpha.2",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.0.3",
+    "morgan": "^1.10.0",
+    "multer": "^1.4.5-lts.1",
+    "node": "^24.16.0",
+    "nodemailer": "^6.9.7",
+    "qrcode": "^1.5.3",
+    "stripe": "^22.2.0",
+    "twilio": "^6.0.2",
+    "winston": "^3.19.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "keywords": [
+    "event-management",
+    "stripe",
+    "qrcode",
+    "ticketing"
+  ],
+  "author": "EventGather",
+  "license": "MIT",
+  "description": "Backend API for Event Management System with Stripe payments and QR ticketing"
+}
