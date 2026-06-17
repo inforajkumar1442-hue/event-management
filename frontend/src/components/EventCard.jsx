@@ -24,11 +24,14 @@ export default function EventCard({ event, hoverClassName = '', onMouseEnter, on
   const isFull = spotsLeft <= 0;
   const isLow = spotsLeft > 0 && spotsLeft <= 10;
 
-  const imageUrl = event.imageUrl?.startsWith('http')
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+const imageUrl = event.imageUrl
+  ? event.imageUrl.startsWith('http')
     ? event.imageUrl
-    : event.imageUrl
-      ? `${import.meta.env.PROD ? 'https://event-management-a7l9.onrender.com' : ''}/${event.imageUrl.startsWith('/') ? event.imageUrl.slice(1) : event.imageUrl}`
-      : null;
+    : `${BASE_URL}${event.imageUrl.startsWith('/') ? '' : '/'}${event.imageUrl}`
+  : null;
+  console.log("Final Image URL:", imageUrl);
 
   // Handle date formatting
   const startDate = event.startDate || event.date;
@@ -39,7 +42,7 @@ export default function EventCard({ event, hoverClassName = '', onMouseEnter, on
     <Link to={`/events/${event._id}`} className={`card group hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 flex flex-col ${hoverClassName}`} onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
       {/* Image */}
       <div className="relative h-44 bg-gradient-to-br from-primary-100 to-primary-50 overflow-hidden">
-        {event.imageUrl ? (
+        {imageUrl ? (
           <img
             src={imageUrl}
             alt={event.title}
