@@ -44,35 +44,9 @@ if (!fs.existsSync(uploadsDir)) {
   console.log('📁 Uploads directory created');
 }
 
-// ─── CORS Configuration for Production ───────────────────────────────────────
-const allowedOrigins = process.env.FRONTEND_URL 
-  ? process.env.FRONTEND_URL.split(',').map(origin => origin.trim())
-  : ['http://localhost:5173', 'http://localhost:3000'];
-
+// ─── CORS Configuration ──────────────────────────────────────────────────────
 const corsOptions = {
-  origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps, curl, postman)
-    if (!origin) return callback(null, true);
-    
-    // Check if origin is allowed
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    } 
-    
-    // In development, allow localhost origins only (not any random origin)
-    if (process.env.NODE_ENV === 'development') {
-      if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
-        console.log(`⚠️ CORS: Allowing localhost origin ${origin} in development mode`);
-        return callback(null, true);
-      }
-      console.log(`❌ CORS: Rejected non-localhost origin ${origin} in development mode`);
-      return callback(new Error(`Origin ${origin} not allowed by CORS`));
-    }
-    
-    // Production: reject any origin not in allowed list
-    console.log(`❌ CORS: Blocked origin ${origin}`);
-    callback(new Error(`Origin ${origin} not allowed by CORS`));
-  },
+  origin: true,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: [
@@ -286,7 +260,6 @@ const validateEnv = () => {
   }
 
   logger.info('✅ Environment variables validated');
-  logger.info(`🌐 CORS allowed origins: ${allowedOrigins.join(', ')}`);
 };
 
 // Add this after validateEnv() function and before shutdown functions
