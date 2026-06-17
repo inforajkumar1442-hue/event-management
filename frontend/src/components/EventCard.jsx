@@ -26,9 +26,9 @@ export default function EventCard({ event, hoverClassName = '', onMouseEnter, on
 
   const imageUrl = event.imageUrl?.startsWith('http')
     ? event.imageUrl
-    : import.meta.env.PROD
-      ? `https://event-management-a7l9.onrender.com${event.imageUrl}`
-      : event.imageUrl;
+    : event.imageUrl
+      ? `${import.meta.env.PROD ? 'https://event-management-a7l9.onrender.com' : ''}/${event.imageUrl.startsWith('/') ? event.imageUrl.slice(1) : event.imageUrl}`
+      : null;
 
   // Handle date formatting
   const startDate = event.startDate || event.date;

@@ -138,7 +138,7 @@ export const updateEvent = async (req, res) => {
 
     const updates = { ...req.body };
     if (req.file) {
-      updates.imageUrl = `${process.env.PORT}/uploads/${req.file.filename}`;
+      updates.imageUrl = `${process.env.BASE_URL}/uploads/${req.file.filename}`;
       logger.debug(`Image updated for event ${req.params.id}: ${req.file.filename}`);
     }
 
