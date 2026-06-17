@@ -4,6 +4,9 @@ import { validationResult } from 'express-validator';
 import Event from '../models/Event.js';
 import Registration from '../models/Registration.js';
 import logger from '../utils/logger.js';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 // @GET /api/events
 export const getEvents = async (req, res) => {
@@ -106,7 +109,7 @@ export const createEvent = async (req, res) => {
     }
 
     if (req.file) {
-      eventData.imageUrl = `/uploads/${req.file.filename}`;
+      eventData.imageUrl = `${process.env.PORT}/uploads/${req.file.filename}`;
       logger.debug(`Image uploaded for event: ${req.file.filename}`);
     }
 
@@ -135,7 +138,7 @@ export const updateEvent = async (req, res) => {
 
     const updates = { ...req.body };
     if (req.file) {
-      updates.imageUrl = `/uploads/${req.file.filename}`;
+      updates.imageUrl = `${process.env.PORT}/uploads/${req.file.filename}`;
       logger.debug(`Image updated for event ${req.params.id}: ${req.file.filename}`);
     }
 
