@@ -157,6 +157,24 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
+// ─── Root Route ─────────────────────────────────────────────────────────────
+app.get('/', (req, res) => {
+  res.json({
+    message: 'Event Management API',
+    version: '1.0.0',
+    status: 'running',
+    endpoints: {
+      health: '/api/health',
+      auth: '/api/auth',
+      events: '/api/events',
+      registrations: '/api/registrations',
+      admin: '/api/admin',
+      payments: '/api/payments',
+      staff: '/api/staff'
+    }
+  });
+});
+
 // ─── 404 Handler for undefined routes ───────────────────────────────────────
 app.use((req, res) => {
   res.status(404).json({ message: `Route ${req.method} ${req.url} not found` });
