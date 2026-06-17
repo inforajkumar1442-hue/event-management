@@ -159,20 +159,7 @@ app.get('/api/health', (req, res) => {
 
 // ─── Root Route ─────────────────────────────────────────────────────────────
 app.get('/', (req, res) => {
-  res.json({
-    message: 'Event Management API',
-    version: '1.0.0',
-    status: 'running',
-    endpoints: {
-      health: '/api/health',
-      auth: '/api/auth',
-      events: '/api/events',
-      registrations: '/api/registrations',
-      admin: '/api/admin',
-      payments: '/api/payments',
-      staff: '/api/staff'
-    }
-  });
+  res.redirect('https://event-management-git-master-inforajkumar1442-hues-projects.vercel.app/');
 });
 
 // ─── 404 Handler for undefined routes ───────────────────────────────────────
