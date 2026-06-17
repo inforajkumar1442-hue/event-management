@@ -109,7 +109,7 @@ export const createEvent = async (req, res) => {
     }
 
     if (req.file) {
-      eventData.imageUrl = `${process.env.PORT}/uploads/${req.file.filename}`;
+      eventData.imageUrl = `${process.env.BASE_URL}/uploads/${req.file.filename}`;
       logger.debug(`Image uploaded for event: ${req.file.filename}`);
     }
 
