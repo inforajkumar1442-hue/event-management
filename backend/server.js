@@ -64,7 +64,11 @@ const corsOptions = {
 };
 
 // ─── Security Middleware ────────────────────────────────────────────────────
-app.use(helmet());
+app.use(
+  helmet({
+    crossOriginResourcePolicy: false, // ✅ IMPORTANT FIX
+  })
+);
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 app.use(compression());
