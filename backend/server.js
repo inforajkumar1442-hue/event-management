@@ -1,3 +1,5 @@
+import dotenv from 'dotenv';
+dotenv.config();
 import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
@@ -6,7 +8,6 @@ import morgan from 'morgan';
 import compression from 'compression';
 import { randomUUID } from 'crypto';
 import rateLimit from 'express-rate-limit';
-import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import logger, { stream } from './utils/logger.js';
@@ -23,7 +24,7 @@ import paymentRoutes from './routes/payments.js';
 import User from './models/User.js';
 import Registration from './models/Registration.js';
 
-dotenv.config();
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
