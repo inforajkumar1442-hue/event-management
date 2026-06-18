@@ -1,4 +1,3 @@
-// frontend/src/pages/Login.jsx
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Eye, EyeOff, Calendar, AlertCircle, Mail, Lock, ArrowRight, Phone, Headphones } from 'lucide-react';
@@ -71,8 +70,6 @@ export default function Login() {
       toast.success(`Welcome back, ${user.name.split(' ')[0]}!`);
       navigate(user.role === 'admin' ? '/admin' : from, { replace: true });
     } catch (err) {
-      console.error('Login error details:', err.response?.data);
-      
       const errorMessage = err.response?.data?.message || 'Login failed. Please try again.';
       
       if (errorMessage.toLowerCase().includes('deactivated')) {

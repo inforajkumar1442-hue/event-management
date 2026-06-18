@@ -2,7 +2,7 @@ import express from 'express';
 import {
   registerForEvent, cancelRegistration, getMyRegistrations,
   checkRegistration, submitFeedback, checkInAttendee,
-  regenerateQRCode, // Add this import
+  regenerateQRCode,
 } from '../controllers/registrationController.js';
 import { protect } from '../middleware/auth.js';
 import { adminOnly } from '../middleware/admin.js';
@@ -19,6 +19,6 @@ router.post('/:id/feedback', submitFeedback);
 
 // Admin only
 router.post('/:id/checkin', adminOnly, checkInAttendee);
-router.post('/:id/regenerate-qr', adminOnly, regenerateQRCode); // Add this line
+router.post('/:id/regenerate-qr', adminOnly, regenerateQRCode);
 
 export default router;

@@ -7,7 +7,6 @@ import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import { getFirstName } from '../utils/helpers';
 
-// ✅ statusConfig stays at the top (outside component)
 const statusConfig = {
   confirmed:  { icon: CheckCircle,  color: 'text-emerald-600', bg: 'bg-emerald-50', label: 'Confirmed'  },
   waitlisted: { icon: AlertCircle,  color: 'text-amber-600',   bg: 'bg-amber-50',   label: 'Waitlisted' },
@@ -15,7 +14,6 @@ const statusConfig = {
   cancelled:  { icon: XCircle,      color: 'text-slate-500',   bg: 'bg-slate-50',   label: 'Cancelled'  },
 };
 
-// ✅ Helper functions stay at the top
 const getDisplayTime = (event) => {
   if (event.startTime && event.endTime) return `${event.startTime} - ${event.endTime}`;
   if (event.startTime) return event.startTime;
@@ -43,8 +41,7 @@ export default function UserDashboard() {
     try {
       const { data } = await api.get('/registrations/my');
       setRegistrations(data.registrations);
-    } catch (err) {
-      console.error(err);
+    } catch {
     } finally {
       setLoading(false);
     }
@@ -183,7 +180,7 @@ export default function UserDashboard() {
                     </div>
                   </div>
                   
-                  {/* ✅ Attendee Name */}
+                  {/* Attendee Name */}
                   <div className="ml-9 mb-2 text-sm">
                     <span className="text-slate-500">Attendee: </span>
                     <span className="font-medium text-slate-700">{attendeeName}</span>

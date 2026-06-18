@@ -57,34 +57,6 @@ export const sendRegistrationSMS = async ({ phone, userName, event, ticketNumber
 };
 
 /**
- * Send event reminder SMS
- */
-export const sendReminderSMS = async ({ phone, userName, event, reminderType }) => {
-  const firstName = userName.split(' ')[0];
-  
-  let message = '';
-  
-  switch(reminderType) {
-    case 'tomorrow':
-      message = `⏰ Reminder ${firstName}! "${event.title}" is TOMORROW at ${event.startTime}. Venue: ${event.venue}. Don't forget your ticket! - EventGather`;
-      break;
-    case 'today':
-      message = `🔔 ${firstName}, "${event.title}" starts TODAY at ${event.startTime}! Venue: ${event.venue}. See you there! - EventGather`;
-      break;
-    case 'five_days':
-      message = `📅 ${firstName}, only 5 DAYS left for "${event.title}" on ${new Date(event.startDate).toLocaleDateString()}. Get ready! - EventGather`;
-      break;
-    case 'one_week':
-      message = `📅 ${firstName}, 1 WEEK to go for "${event.title}" on ${new Date(event.startDate).toLocaleDateString()}. We can't wait to see you! - EventGather`;
-      break;
-    default:
-      message = `📢 ${firstName}, reminder: "${event.title}" on ${new Date(event.startDate).toLocaleDateString()} at ${event.startTime}. Venue: ${event.venue}. - EventGather`;
-  }
-  
-  return await sendSMS(phone, message);
-};
-
-/**
  * Send cancellation SMS
  */
 export const sendCancellationSMS = async ({ phone, userName, event }) => {

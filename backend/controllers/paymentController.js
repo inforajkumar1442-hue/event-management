@@ -1,4 +1,3 @@
-// backend/controllers/paymentController.js
 import stripe from '../config/stripe.js';
 import Event from '../models/Event.js';
 import Registration from '../models/Registration.js';
@@ -285,7 +284,7 @@ export const handleStripeWebhook = async (req, res) => {
   const sig = req.headers['stripe-signature'];
   const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
   
-  // ✅ ADD THIS VALIDATION - Check if webhook secret is configured
+  // Check if webhook secret is configured
   if (!endpointSecret) {
     logger.error('❌ STRIPE_WEBHOOK_SECRET is not configured in environment variables');
     return res.status(500).json({ error: 'Webhook secret not configured' });

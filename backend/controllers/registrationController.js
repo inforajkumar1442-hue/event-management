@@ -4,13 +4,7 @@ import Event from '../models/Event.js';
 import User from '../models/User.js';
 import { generateQRCode } from '../utils/qrCode.js';
 import { sendRegistrationConfirmation, sendCancellationEmail } from '../utils/email.js';
-import { sendRegistrationSMS, sendCancellationSMS } from '../utils/sms.js';  // ✅ Added sendCancellationSMS
-
-// Helper function to extract first name (for personalization)
-const getFirstName = (fullName) => {
-  if (!fullName) return 'Attendee';
-  return fullName.split(' ')[0];
-};
+import { sendRegistrationSMS, sendCancellationSMS } from '../utils/sms.js';
 
 // @POST /api/registrations/:eventId
 export const registerForEvent = async (req, res) => {
@@ -372,7 +366,7 @@ export const submitFeedback = async (req, res) => {
 // @POST /api/registrations/:id/checkin  (Admin only)
 export const checkInAttendee = async (req, res) => {
   const registration = await Registration.findById(req.params.id)
-    .populate('user', 'name email phone')  // ✅ Added phone for SMS
+    .populate('user', 'name email phone')
     .populate('event', 'title');
 
   if (!registration) return res.status(404).json({ message: 'Registration not found' });
@@ -385,10 +379,7 @@ export const checkInAttendee = async (req, res) => {
   registration.status = 'attended';
   await registration.save();
 
-  // ✅ Optional: Send check-in confirmation SMS
   if (registration.user.phone) {
-    // You can create a sendCheckInSMS function if needed
-    console.log(`📱 Check-in SMS would be sent to ${registration.user.phone}`);
   }
 
   res.json({ message: `${registration.user.name} checked in successfully`, registration });

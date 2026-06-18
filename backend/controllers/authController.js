@@ -15,7 +15,7 @@ export const register = async (req, res) => {
 
   let { name, email, password, department, phone } = req.body;
   
-  // ✅ ADD SANITIZATION
+  // ADD SANITIZATION
   name = name?.trim().replace(/[<>]/g, '');
   email = email?.toLowerCase().trim();
   department = department?.trim().replace(/[<>]/g, '');

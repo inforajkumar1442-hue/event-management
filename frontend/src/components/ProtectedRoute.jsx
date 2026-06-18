@@ -29,7 +29,7 @@ export const AdminRoute = () => {
   return user.role === 'admin' ? <Outlet /> : <Navigate to="/dashboard" replace />;
 };
 
-// ✅ Staff Route - Staff OR Admin users
+// Staff Route - Staff OR Admin users
 export const StaffRoute = () => {
   const { user, loading } = useAuth();
   

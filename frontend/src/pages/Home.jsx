@@ -46,7 +46,7 @@ export default function Home() {
   useEffect(() => {
     api.get('/events', { params: { limit: 4, status: 'upcoming', sort: '-startDate' } })
       .then(r => setEvents(r.data.events))
-      .catch((err) => { console.error('Failed to load events:', err); });
+      .catch(() => {});
   }, []);
 
   return (

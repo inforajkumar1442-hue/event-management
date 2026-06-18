@@ -17,7 +17,7 @@ const eventValidation = [
   body('startDate').isISO8601().toDate().withMessage('Enter a valid start date'),
   body('endDate').isISO8601().toDate().withMessage('Enter a valid end date')
     .custom((value, { req }) => {
-      if (new Date(value) < new Date(req.body.startDate)) { // ✅ FIXED
+      if (new Date(value) < new Date(req.body.startDate)) {
         throw new Error('End date must be after start date');
       }
       return true;

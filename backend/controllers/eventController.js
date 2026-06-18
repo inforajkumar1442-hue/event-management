@@ -1,12 +1,7 @@
-// backend/controllers/eventController.js - Complete fixed version with Winston logger
-
 import { validationResult } from 'express-validator';
 import Event from '../models/Event.js';
 import Registration from '../models/Registration.js';
 import logger from '../utils/logger.js';
-import dotenv from 'dotenv';
-
-dotenv.config();
 
 // @GET /api/events
 export const getEvents = async (req, res) => {
@@ -95,7 +90,7 @@ export const createEvent = async (req, res) => {
   }
 
   try {
-    // ✅ Sanitize input data
+    // Sanitize input data
     const eventData = { ...req.body, createdBy: req.user._id };
     
     if (eventData.title) {

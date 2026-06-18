@@ -24,7 +24,7 @@ export const getDashboardStats = async (req, res) => {
     // Fix: populate event with startDate (not the virtual 'date')
     Registration.find({ status: { $in: ['confirmed', 'attended'] } })
       .populate('user', 'name email')
-      .populate('event', 'title startDate venue')   // ← was 'title date'
+      .populate('event', 'title startDate venue')
       .sort('-createdAt')
       .limit(10),
 
@@ -61,7 +61,7 @@ export const getDashboardStats = async (req, res) => {
 // Toggle staff member active status
 export const toggleStaffStatus = async (req, res) => {
   try {
-    // ✅ Sanitize ID parameter
+    // Sanitize ID parameter
     const staffId = req.params.id?.trim();
     
     if (!staffId) {
@@ -237,7 +237,7 @@ export const createStaff = async (req, res) => {
   try {
     let { name, email, password, department, phone } = req.body;
     
-    // ✅ ADD SANITIZATION
+    // ADD SANITIZATION
     name = name?.trim().replace(/[<>]/g, '');
     email = email?.toLowerCase().trim();
     department = department?.trim().replace(/[<>]/g, '');

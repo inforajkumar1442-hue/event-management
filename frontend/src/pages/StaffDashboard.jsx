@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   Calendar, Users, CheckCircle, Clock, MapPin, 
-  Search, X, UserCheck, TrendingUp 
+  Search, UserCheck, TrendingUp 
 } from 'lucide-react';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
@@ -46,8 +46,7 @@ export default function StaffDashboard() {
     try {
       const { data } = await api.get('/staff/stats');
       setStats(data.stats);
-    } catch (err) {
-      console.error('Failed to load stats');
+    } catch {
     }
   };
 

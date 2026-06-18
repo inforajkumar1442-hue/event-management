@@ -31,7 +31,6 @@ const imageUrl = event.imageUrl
     ? event.imageUrl
     : `${BASE_URL}${event.imageUrl.startsWith('/') ? '' : '/'}${event.imageUrl}`
   : null;
-  console.log("Final Image URL:", imageUrl);
 
   // Handle date formatting
   const startDate = event.startDate || event.date;

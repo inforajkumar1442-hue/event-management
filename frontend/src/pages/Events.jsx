@@ -1,5 +1,3 @@
-// frontend/src/pages/Events.jsx - Complete updated version
-
 import { useState, useEffect, useCallback } from 'react';
 import { Search, X } from 'lucide-react';
 import EventCard from '../components/EventCard';
@@ -38,14 +36,7 @@ export default function Events() {
         params.status = stat;
       }
 
-      console.log('📤 API Request:', { url: '/events', params });
-
       const { data } = await api.get('/events', { params });
-      
-      console.log('📥 API Response:', {
-        eventsCount: data.events?.length,
-        total: data.pagination?.total,
-      });
       
       setEvents(data.events || []);
       setPagination(data.pagination);
@@ -54,7 +45,6 @@ export default function Events() {
         toast(`No events found matching "${search}"`, { icon: '🔍' });
       }
     } catch (err) {
-      console.error('❌ API Error:', err);
       toast.error('Failed to load events');
       setEvents([]);
     } finally {
@@ -77,22 +67,18 @@ export default function Events() {
 
   const handleSearch = (e) => {
     const value = e.target.value;
-    console.log('🔍 Search input:', value);
     setSearchTerm(value);
   };
 
   const handleCategoryChange = (newCategory) => {
-    console.log('📂 Category changed:', newCategory);
     setCategory(newCategory);
   };
 
   const handleStatusChange = (newStatus) => {
-    console.log('🏷️ Status changed:', newStatus);
     setStatus(newStatus);
   };
 
   const resetFilters = () => {
-    console.log('🔄 Resetting all filters');
     setSearchTerm('');
     setCategory('All');
     setStatus('upcoming');

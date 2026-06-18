@@ -2,13 +2,9 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Calendar, Clock, MapPin, Users, Tag, Share2, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
-import { loadStripe } from '@stripe/stripe-js'; // ← ADD THIS IMPORT
 import toast from 'react-hot-toast';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
-
-// Initialize Stripe (add this after imports)
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
 export default function EventDetail() {
   const { id } = useParams();
@@ -18,7 +14,7 @@ export default function EventDetail() {
   const [registration, setRegistration] = useState(null);
   const [loading, setLoading] = useState(true);
   const [registering, setRegistering] = useState(false);
-  const [processingPayment, setProcessingPayment] = useState(false); // ← ADD THIS
+  const [processingPayment, setProcessingPayment] = useState(false);
 
   useEffect(() => {
     fetchEvent();
@@ -59,24 +55,6 @@ export default function EventDetail() {
     }
   };
 
-  // Handle PAID event registration (NEW FUNCTION)
-  // const handlePaidRegistration = async () => {
-  //   if (!user) return navigate('/login', { state: { from: { pathname: `/events/${id}` } } });
-    
-  //   setProcessingPayment(true);
-  //   try {
-  //     // Create Stripe checkout session
-  //     const { data } = await api.post(`/payments/create-checkout-session/${id}`);
-      
-  //     // Load Stripe and redirect to checkout
-  //     const stripe = await stripePromise;
-  //     await stripe.redirectToCheckout({ sessionId: data.sessionId });
-  //   } catch (err) {
-  //     toast.error(err.response?.data?.message || 'Failed to initiate payment');
-  //     setProcessingPayment(false);
-  //   }
-  // };
-
   const handlePaidRegistration = async () => {
   if (!user) {
     return navigate('/login', {
@@ -89,7 +67,6 @@ export default function EventDetail() {
   try {
     const { data } = await api.post(`/payments/create-checkout-session/${id}`);
 
-    // ✅ SIMPLE REDIRECT (recommended)
     window.location.href = data.sessionUrl;
 
   } catch (err) {
@@ -134,7 +111,7 @@ export default function EventDetail() {
   const isFull = spotsLeft <= 0;
   const isRegistered = registration && ['confirmed', 'waitlisted', 'attended'].includes(registration.status);
   const canRegister = !isRegistered && event.status !== 'cancelled' && event.status !== 'completed';
-  const isPaidEvent = !event.isFree && event.price > 0; // ← ADD THIS
+  const isPaidEvent = !event.isFree && event.price > 0;
 
   // Format dates correctly
   const startDate = event.startDate;

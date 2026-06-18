@@ -42,7 +42,7 @@ const registrationSchema = new mongoose.Schema(
     },
     ticketNumber: {
       type: String,
-      unique: true,  // ✅ This creates the unique index - KEEP THIS
+      unique: true,
     },
   },
   { timestamps: true }
@@ -62,7 +62,6 @@ registrationSchema.pre('save', function (next) {
   next();
 });
 
-// ✅ Keep these:
 registrationSchema.index({ user: 1, status: 1, createdAt: -1 });
 registrationSchema.index({ event: 1, status: 1, createdAt: -1 });
 registrationSchema.index({ event: 1, status: 1, createdAt: 1 }); // For waitlist

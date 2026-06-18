@@ -1,15 +1,9 @@
-// frontend/src/pages/PaymentSuccess.jsx
 import { useEffect, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { CheckCircle, Calendar, Download, Printer, MapPin, User } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../api/axios';
-
-// Helper function to get first name
-const getFirstName = (fullName) => {
-  if (!fullName) return 'Attendee';
-  return fullName.split(' ')[0];
-};
+import { getFirstName } from '../utils/helpers';
 
 export default function PaymentSuccess() {
   const [searchParams] = useSearchParams();
@@ -17,13 +11,11 @@ export default function PaymentSuccess() {
   const eventId = searchParams.get('event_id');
   const regId = searchParams.get('reg_id');
   
-  // ✅ REQUIRED STATE VARIABLES
   const [verifying, setVerifying] = useState(true);
   const [success, setSuccess] = useState(false);
   const [registration, setRegistration] = useState(null);
   const [error, setError] = useState(null);
 
-  // ✅ VERIFY PAYMENT FUNCTION (console.log removed)
   const verifyPayment = async () => {
     try {
       const { data } = await api.get(`/payments/verify/${sessionId}?event_id=${eventId}&reg_id=${regId}`);
@@ -36,8 +28,7 @@ export default function PaymentSuccess() {
         setError(data.message || 'Payment verification failed');
         toast.error(data.message || 'Payment verification failed');
       }
-    } catch (error) {
-      console.error('Verification error:', error);
+    } catch {
       setError('Failed to verify payment. Please contact support.');
       toast.error('Failed to verify payment. Please contact support.');
     } finally {
@@ -45,12 +36,10 @@ export default function PaymentSuccess() {
     }
   };
 
-  // ✅ PRINT TICKET FUNCTION
   const handlePrintTicket = () => {
     window.print();
   };
 
-  // ✅ DOWNLOAD QR CODE FUNCTION
   const handleDownloadQR = () => {
     if (registration?.qrCode) {
       const link = document.createElement('a');
@@ -60,7 +49,6 @@ export default function PaymentSuccess() {
     }
   };
 
-  // ✅ RUN VERIFICATION WHEN PAGE LOADS
   useEffect(() => {
     if (sessionId && eventId && regId) {
       verifyPayment();
@@ -70,7 +58,6 @@ export default function PaymentSuccess() {
     }
   }, [sessionId, eventId, regId]);
 
-  // ✅ LOADING STATE
   if (verifying) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
@@ -83,7 +70,6 @@ export default function PaymentSuccess() {
     );
   }
 
-  // ✅ ERROR STATE
   if (error) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center px-4">
@@ -106,7 +92,6 @@ export default function PaymentSuccess() {
     );
   }
 
-  // ✅ NOT SUCCESSFUL YET (should not happen normally)
   if (!success || !registration) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center px-4">
@@ -124,7 +109,6 @@ export default function PaymentSuccess() {
     );
   }
 
-  // ✅ SUCCESS STATE - DISPLAY TICKET
   const event = registration.event;
   const eventDate = event?.startDate || event?.date;
   const attendeeName = registration.user?.name || 'Valued Attendee';

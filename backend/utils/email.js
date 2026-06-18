@@ -28,26 +28,6 @@ const emailStyles = `
   </style>
 `;
 
-/** Helper: safely format a date string */
-const fmtDate = (d) => {
-  if (!d) return 'TBA';
-  return new Date(d).toLocaleDateString('en-IN', {
-    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
-  });
-};
-
-/** Helper: build a readable time string from event fields */
-const fmtTime = (event) => {
-  // Support both real fields (startTime/endTime) and the virtual (time)
-  if (event.startTime && event.endTime) return `${event.startTime} - ${event.endTime}`;
-  if (event.startTime) return event.startTime;
-  if (event.time) return event.time;          // virtual fallback
-  return 'TBA';
-};
-
-/** Helper: resolve the display date from event fields */
-const fmtEventDate = (event) => fmtDate(event.startDate || event.date);
-
 export const sendRegistrationConfirmation = async ({ to, userName, event, ticketNumber, qrCode, userPhone }) => {
   const firstName = userName.split(' ')[0];
   
@@ -280,7 +260,7 @@ export const sendEventReminder = async ({ to, userName, event }) => {
         <p>Just a reminder that you have an event tomorrow:</p>
         <div class="info-card">
           <div class="info-row">📅 <strong>Event:</strong> ${event.title}</div>
-          <div class="info-row">⏰ <strong>Time:</strong> ${fmtTime(event)}</div>
+          <div class="info-row">⏰ <strong>Time:</strong> ${event.startTime ? (event.endTime ? `${event.startTime} - ${event.endTime}` : event.startTime) : 'Time TBA'}</div>
           <div class="info-row">📍 <strong>Venue:</strong> ${event.venue}</div>
         </div>
         <p>Don't forget to bring your QR code for check-in!</p>

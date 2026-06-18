@@ -99,14 +99,6 @@ const eventSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
-    // Soft delete fields
-    isDeleted: {
-      type: Boolean,
-      default: false,
-    },
-    deletedAt: {
-      type: Date,
-    },
   },
   { 
     timestamps: true,
@@ -119,22 +111,22 @@ const eventSchema = new mongoose.Schema(
 // VIRTUAL FIELDS (for frontend compatibility)
 // ==============================================
 
-// ✅ FIX: Spots left
+// Spots left
 eventSchema.virtual('spotsLeft').get(function () {
   return Math.max(0, this.capacity - (this.registeredCount || 0));
 });
 
-// ✅ FIX: Is full
+// Is full
 eventSchema.virtual('isFull').get(function () {
   return (this.registeredCount || 0) >= this.capacity;
 });
 
-// ✅ FIX: Date virtual (for backward compatibility with frontend expecting 'date')
+// Date virtual (for backward compatibility with frontend expecting 'date')
 eventSchema.virtual('date').get(function () {
   return this.startDate;
 });
 
-// ✅ FIX: Time virtual (for backward compatibility)
+// Time virtual (for backward compatibility)
 eventSchema.virtual('time').get(function () {
   if (this.startTime && this.endTime) {
     return `${this.startTime} - ${this.endTime}`;
@@ -142,7 +134,7 @@ eventSchema.virtual('time').get(function () {
   return this.startTime || 'Time TBA';
 });
 
-// ✅ FIX: Duration in minutes (useful for reports)
+// Duration in minutes (useful for reports)
 eventSchema.virtual('durationMinutes').get(function () {
   if (!this.startDate || !this.endDate) return 0;
   const diff = this.endDate - this.startDate;
@@ -186,82 +178,8 @@ eventSchema.pre('save', function(next) {
 });
 
 // ==============================================
-// INSTANCE METHODS
-// ==============================================
-
-// Check if event has available spots
-eventSchema.methods.hasAvailableSpots = function() {
-  return this.registeredCount < this.capacity;
-};
-
-// Get number of available spots
-eventSchema.methods.getAvailableSpots = function() {
-  return Math.max(0, this.capacity - this.registeredCount);
-};
-
-// Increment registered count (with validation)
-eventSchema.methods.incrementRegisteredCount = async function() {
-  if (!this.hasAvailableSpots()) {
-    throw new Error('Event is at full capacity');
-  }
-  this.registeredCount += 1;
-  await this.save();
-  return this.registeredCount;
-};
-
-// Decrement registered count
-eventSchema.methods.decrementRegisteredCount = async function() {
-  if (this.registeredCount > 0) {
-    this.registeredCount -= 1;
-    await this.save();
-  }
-  return this.registeredCount;
-};
-
-// Soft delete method
-eventSchema.methods.softDelete = async function() {
-  this.isDeleted = true;
-  this.deletedAt = new Date();
-  this.status = 'cancelled';
-  await this.save();
-};
-
-// Restore soft deleted event
-eventSchema.methods.restore = async function() {
-  this.isDeleted = false;
-  this.deletedAt = null;
-  await this.save();
-};
-
-// ==============================================
-// STATIC METHODS
-// ==============================================
-
-// Get upcoming events
-eventSchema.statics.getUpcoming = function(limit = 10) {
-  return this.find({ 
-    status: 'upcoming', 
-    isPublished: true, 
-    isDeleted: false,
-    startDate: { $gte: new Date() }
-  })
-  .sort('startDate')
-  .limit(limit);
-};
-
-// Get popular events (most registered)
-eventSchema.statics.getPopular = function(limit = 10) {
-  return this.find({ isPublished: true, isDeleted: false })
-    .sort('-registeredCount')
-    .limit(limit);
-};
-
-// ==============================================
 // INDEXES FOR OPTIMAL QUERIES
 // ==============================================
-
-// Text search index
-eventSchema.index({ title: 'text', description: 'text', tags: 'text' });
 
 // Compound indexes for common queries
 eventSchema.index({ startDate: 1, category: 1, status: 1 });
@@ -274,27 +192,5 @@ eventSchema.index({ isFree: 1, status: 1, startDate: 1 });
 eventSchema.index({ endDate: 1, status: 1 });
 eventSchema.index({ isPublished: 1, status: 1, startDate: 1 });
 eventSchema.index({ createdAt: -1 });
-eventSchema.index({ isDeleted: 1, status: 1, startDate: -1 }); // For soft delete queries
-
-// Soft delete indexes
-eventSchema.index({ isDeleted: 1, status: 1 });
-eventSchema.index({ isDeleted: 1, startDate: -1 });
-
-// ==============================================
-// QUERY MIDDLEWARE
-// ==============================================
-
-// Automatically exclude soft-deleted events unless includeDeleted option is true
-eventSchema.pre(/^find/, function() {
-  // Only apply if not explicitly told to include deleted
-  if (this.getOptions().includeDeleted !== true) {
-    this.where({ isDeleted: { $ne: true } });
-  }
-});
-
-// Populate createdBy on all find queries by default (optional)
-eventSchema.pre(/^find/, function() {
-  this.populate('createdBy', 'name email');
-});
 
 export default mongoose.model('Event', eventSchema);

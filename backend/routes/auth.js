@@ -13,14 +13,14 @@ const router = express.Router();
 const registerValidation = [
   body('name').trim().isLength({ min: 2, max: 50 })
     .withMessage('Name must be 2–50 characters')
-    .escape(), // ✅ Add sanitization
+    .escape(),
   body('email').isEmail().normalizeEmail()
     .withMessage('Enter a valid email')
-    .customSanitizer(value => value.toLowerCase()), // ✅ Ensure lowercase
+    .customSanitizer(value => value.toLowerCase()),
   body('password').isLength({ min: 6 })
     .withMessage('Password must be at least 6 characters'),
-  body('department').trim().escape(), // ✅ Add
-  body('phone').trim().escape(), // ✅ Add
+  body('department').trim().escape(),
+  body('phone').trim().escape(),
 ];
 const loginValidation = [
   body('email').isEmail().normalizeEmail(),

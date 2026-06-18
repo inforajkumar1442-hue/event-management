@@ -67,7 +67,7 @@ const corsOptions = {
 // ─── Security Middleware ────────────────────────────────────────────────────
 app.use(
   helmet({
-    crossOriginResourcePolicy: false, // ✅ IMPORTANT FIX
+    crossOriginResourcePolicy: false,
   })
 );
 app.use(cors(corsOptions));
@@ -208,7 +208,7 @@ app.use((err, req, res, next) => {
 // ─── Helper Functions ───────────────────────────────────────────────────────
 const updateEventStatuses = async () => {
   try {
-    // ✅ Check if MongoDB is connected first
+    // Check if MongoDB is connected first
     if (mongoose.connection.readyState !== 1) {
       logger.warn('MongoDB not connected, skipping event status update');
       return;
@@ -266,8 +266,6 @@ const validateEnv = () => {
 
   logger.info('✅ Environment variables validated');
 };
-
-// Add this after validateEnv() function and before shutdown functions
 
 // ─── Database Connection and Server Start ───────────────────────────────────
 const startServer = async () => {

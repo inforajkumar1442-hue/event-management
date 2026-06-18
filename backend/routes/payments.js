@@ -1,10 +1,8 @@
-// backend/routes/payments.js
-// Add this route
 import express from 'express';
 import {
   createCheckoutSession,
   verifyPayment,
-  handleStripeWebhook,  // Add this import
+  handleStripeWebhook,
 } from '../controllers/paymentController.js';
 import { protect } from '../middleware/auth.js';
 
