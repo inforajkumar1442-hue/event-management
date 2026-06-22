@@ -6,12 +6,14 @@ import toast from 'react-hot-toast';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import { getFirstName } from '../utils/helpers';
+import ConfirmModal from '../components/ConfirmModal';
 
 const statusConfig = {
-  confirmed:  { icon: CheckCircle,  color: 'text-emerald-600', bg: 'bg-emerald-50', label: 'Confirmed'  },
-  waitlisted: { icon: AlertCircle,  color: 'text-amber-600',   bg: 'bg-amber-50',   label: 'Waitlisted' },
-  attended:   { icon: CheckCircle,  color: 'text-blue-600',    bg: 'bg-blue-50',    label: 'Attended'   },
-  cancelled:  { icon: XCircle,      color: 'text-slate-500',   bg: 'bg-slate-50',   label: 'Cancelled'  },
+  confirmed:       { icon: CheckCircle, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-900/30', label: 'Confirmed'       },
+  waitlisted:      { icon: AlertCircle, color: 'text-amber-600 dark:text-amber-400',   bg: 'bg-amber-50 dark:bg-amber-900/30',   label: 'Waitlisted'      },
+  attended:        { icon: CheckCircle, color: 'text-blue-600 dark:text-blue-400',    bg: 'bg-blue-50 dark:bg-blue-900/30',    label: 'Attended'        },
+  cancelled:       { icon: XCircle,     color: 'text-slate-500 dark:text-slate-400',   bg: 'bg-slate-50 dark:bg-slate-800/50',   label: 'Cancelled'       },
+  pending_payment: { icon: AlertCircle, color: 'text-yellow-600 dark:text-yellow-400',  bg: 'bg-yellow-50 dark:bg-yellow-900/30',  label: 'Payment Pending' },
 };
 
 const getDisplayTime = (event) => {
@@ -34,6 +36,14 @@ export default function UserDashboard() {
   const [activeTab, setActiveTab] = useState('upcoming');
   const [feedbackModal, setFeedbackModal] = useState(null);
   const [feedbackData, setFeedbackData] = useState({ rating: 5, comment: '' });
+  const [cancelEventId, setCancelEventId] = useState(null);
+  const [cancelCooldown, setCancelCooldown] = useState(0);
+
+  useEffect(() => {
+    if (cancelCooldown <= 0) return;
+    const timer = setInterval(() => setCancelCooldown(prev => prev - 1), 1000);
+    return () => clearInterval(timer);
+  }, [cancelCooldown]);
 
   useEffect(() => { fetchRegistrations(); }, []);
 
@@ -48,13 +58,15 @@ export default function UserDashboard() {
   };
 
   const handleCancel = async (eventId) => {
-    if (!confirm('Cancel this registration?')) return;
+    setCancelCooldown(10);
+    setCancelEventId(null);
     try {
       await api.delete(`/registrations/${eventId}`);
       toast.success('Registration cancelled');
       fetchRegistrations();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed');
+      setCancelCooldown(0);
     }
   };
 
@@ -94,12 +106,12 @@ export default function UserDashboard() {
     return (
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
         <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-slate-200 rounded w-1/4" />
+          <div className="h-8 bg-slate-200 dark:bg-slate-700 rounded w-1/4" />
           <div className="grid grid-cols-3 gap-4">
-            {[1, 2, 3].map(i => <div key={i} className="h-24 bg-slate-100 rounded-xl" />)}
+            {[1, 2, 3].map(i => <div key={i} className="h-24 bg-slate-100 dark:bg-slate-800 rounded-xl" />)}
           </div>
-          <div className="h-10 bg-slate-100 rounded-xl w-48" />
-          {[1, 2, 3].map(i => <div key={i} className="h-32 bg-slate-100 rounded-xl" />)}
+          <div className="h-10 bg-slate-100 dark:bg-slate-800 rounded-xl w-48" />
+          {[1, 2, 3].map(i => <div key={i} className="h-32 bg-slate-100 dark:bg-slate-800 rounded-xl" />)}
         </div>
       </div>
     );
@@ -109,10 +121,10 @@ export default function UserDashboard() {
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="font-display font-bold text-3xl text-slate-900">
+        <h1 className="font-display font-bold text-3xl text-slate-900 dark:text-slate-100">
           Welcome, {getFirstName(user?.name)}! 👋
         </h1>
-        <p className="text-slate-500 mt-1">Manage your event registrations</p>
+        <p className="text-slate-500 dark:text-slate-400 mt-1">Manage your event registrations</p>
       </div>
 
       {/* Stats */}
@@ -120,24 +132,24 @@ export default function UserDashboard() {
         {stats.map(s => (
           <div key={s.label} className="card p-5 text-center">
             <div className={`text-3xl font-display font-bold mb-1 ${s.color.split(' ')[0]}`}>{s.value}</div>
-            <div className="text-xs text-slate-500 font-medium">{s.label}</div>
+            <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">{s.label}</div>
           </div>
         ))}
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-slate-100 rounded-xl p-1 mb-6 w-fit">
+      <div className="flex gap-1 bg-slate-100 dark:bg-slate-800 rounded-xl p-1 mb-6 w-fit">
         {[['upcoming', 'Upcoming'], ['past', 'Past'], ['cancelled', 'Cancelled']].map(([tab, label]) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              activeTab === tab ? 'bg-white shadow text-slate-900' : 'text-slate-500 hover:text-slate-700'
+              activeTab === tab ? 'bg-white dark:bg-slate-700 shadow text-slate-900 dark:text-slate-100' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
             }`}
           >
             {label}
             {filtered[tab].length > 0 && (
-              <span className="ml-1 text-xs bg-primary-100 text-primary-700 rounded-full px-1.5">
+              <span className="ml-1 text-xs bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300 rounded-full px-1.5">
                 {filtered[tab].length}
               </span>
             )}
@@ -148,8 +160,8 @@ export default function UserDashboard() {
       {/* Registration List */}
       {filtered[activeTab].length === 0 ? (
         <div className="text-center py-16">
-          <Calendar className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-          <p className="text-slate-500 font-medium">No {activeTab} registrations</p>
+          <Calendar className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
+          <p className="text-slate-500 dark:text-slate-400 font-medium">No {activeTab} registrations</p>
           <Link to="/events" className="btn-primary mt-4 inline-block text-sm">Browse Events</Link>
         </div>
       ) : (
@@ -172,7 +184,7 @@ export default function UserDashboard() {
                     <div>
                       <Link
                         to={`/events/${reg.event._id}`}
-                        className="font-display font-bold text-slate-900 hover:text-primary-600 transition-colors"
+                        className="font-display font-bold text-slate-900 dark:text-slate-100 hover:text-primary-600 transition-colors"
                       >
                         {reg.event.title}
                       </Link>
@@ -182,11 +194,11 @@ export default function UserDashboard() {
                   
                   {/* Attendee Name */}
                   <div className="ml-9 mb-2 text-sm">
-                    <span className="text-slate-500">Attendee: </span>
-                    <span className="font-medium text-slate-700">{attendeeName}</span>
+                    <span className="text-slate-500 dark:text-slate-400">Attendee: </span>
+                    <span className="font-medium text-slate-700 dark:text-slate-300">{attendeeName}</span>
                   </div>
                   
-                  <div className="flex flex-wrap gap-4 text-sm text-slate-500 ml-9">
+                  <div className="flex flex-wrap gap-4 text-sm text-slate-500 dark:text-slate-400 ml-9">
                     <span className="flex items-center gap-1">
                       <Calendar className="w-3.5 h-3.5" />
                       {safeFormat(eventDate, 'MMM d, yyyy')}
@@ -200,7 +212,10 @@ export default function UserDashboard() {
                       {reg.event.venue}
                     </span>
                   </div>
-                  <p className="text-xs text-slate-400 mt-2 ml-9">Ticket: {reg.ticketNumber}</p>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-2 ml-9">
+                    Ticket: {reg.ticketNumber}
+                    {reg.ticketTypeName && <span className="ml-2">— {reg.ticketTypeName}</span>}
+                  </p>
                 </div>
 
                 <div className="flex flex-row sm:flex-col gap-2 sm:items-end justify-end">
@@ -208,7 +223,7 @@ export default function UserDashboard() {
                     <img 
                       src={reg.qrCode} 
                       alt="QR Code" 
-                      className="w-16 h-16 rounded-lg border border-slate-100"
+                      className="w-16 h-16 rounded-lg border border-slate-100 dark:border-slate-700"
                       title={`Ticket for ${getFirstName(attendeeName)}`}
                     />
                   )}
@@ -221,16 +236,17 @@ export default function UserDashboard() {
                     </button>
                   )}
                   {reg.status === 'attended' && reg.feedback?.rating && (
-                    <div className="flex items-center gap-1 text-amber-500 text-sm" title={`Rating: ${reg.feedback.rating}/5`}>
+                    <div className="flex items-center gap-1 text-amber-500 dark:text-amber-400 text-sm" title={`Rating: ${reg.feedback.rating}/5`}>
                       {'★'.repeat(reg.feedback.rating)}{'☆'.repeat(5 - reg.feedback.rating)}
                     </div>
                   )}
                   {['confirmed', 'waitlisted'].includes(reg.status) && (
                     <button
-                      onClick={() => handleCancel(reg.event._id)}
-                      className="text-xs text-red-500 hover:text-red-700 font-medium"
+                      onClick={() => setCancelEventId(reg.event._id)}
+                      disabled={cancelCooldown > 0}
+                      className={`text-xs font-medium ${cancelCooldown > 0 ? 'text-slate-400 dark:text-slate-500 cursor-not-allowed' : 'text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-400'}`}
                     >
-                      Cancel
+                      {cancelCooldown > 0 ? `Wait ${cancelCooldown}s` : 'Cancel'}
                     </button>
                   )}
                 </div>
@@ -243,14 +259,14 @@ export default function UserDashboard() {
       {/* Feedback Modal */}
       {feedbackModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md animate-slide-up">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-md animate-slide-up">
             <h3 className="font-display font-bold text-xl mb-4">Rate this Event</h3>
             <div className="flex gap-2 mb-4">
               {[1, 2, 3, 4, 5].map(n => (
                 <button
                   key={n}
                   onClick={() => setFeedbackData(f => ({ ...f, rating: n }))}
-                  className={`text-2xl transition-transform hover:scale-110 ${n <= feedbackData.rating ? 'text-amber-400' : 'text-slate-200'}`}
+                  className={`text-2xl transition-transform hover:scale-110 ${n <= feedbackData.rating ? 'text-amber-400' : 'text-slate-200 dark:text-slate-600'}`}
                 >
                   ★
                 </button>
@@ -269,6 +285,15 @@ export default function UserDashboard() {
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        open={!!cancelEventId}
+        title="Cancel Registration?"
+        message="Are you sure you want to cancel this registration?"
+        onConfirm={() => handleCancel(cancelEventId)}
+        onCancel={() => setCancelEventId(null)}
+        confirmLabel="Yes, Cancel"
+      />
     </div>
   );
 }

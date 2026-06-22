@@ -1,11 +1,16 @@
 import winston from 'winston';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Define log format
+const logDir = path.join(__dirname, '../logs');
+if (!fs.existsSync(logDir)) {
+  fs.mkdirSync(logDir, { recursive: true });
+}
+
 const logFormat = winston.format.combine(
   winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
   winston.format.errors({ stack: true }),
@@ -24,9 +29,6 @@ const consoleFormat = winston.format.combine(
     return `${timestamp} ${level}: ${message}`;
   })
 );
-
-// Create logs directory if it doesn't exist
-const logDir = path.join(__dirname, '../logs');
 
 // Configure logger
 const logger = winston.createLogger({

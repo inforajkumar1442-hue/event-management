@@ -15,17 +15,18 @@ export default function FontSwitcher({ text }) {
   useEffect(() => {
     const interval = setInterval(() => {
       setVisible(false);
-      setTimeout(() => {
+      const timeout = setTimeout(() => {
         setIndex(i => (i + 1) % fonts.length);
         setVisible(true);
       }, 300);
+      return () => clearTimeout(timeout);
     }, 3000);
     return () => clearInterval(interval);
   }, []);
 
   return (
     <span
-      className={`inline-block text-amber-300 transition-all duration-300 ${
+      className={`inline-block text-amber-300 dark:text-amber-400 transition-all duration-300 ${
         visible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2'
       }`}
       style={{ fontFamily: fonts[index] }}

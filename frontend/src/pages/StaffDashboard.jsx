@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import { 
   Calendar, Users, CheckCircle, Clock, MapPin, 
   Search, UserCheck, TrendingUp 
@@ -103,9 +102,9 @@ export default function StaffDashboard() {
   const getCheckInStatus = () => {
     if (!stats) return null;
     const rate = stats.checkInRate;
-    if (rate >= 80) return { color: 'text-green-600', bg: 'bg-green-100', text: 'Excellent' };
-    if (rate >= 50) return { color: 'text-yellow-600', bg: 'bg-yellow-100', text: 'Good' };
-    return { color: 'text-orange-600', bg: 'bg-orange-100', text: 'Needs Attention' };
+    if (rate >= 80) return { color: 'text-green-600 dark:text-green-400', bg: 'bg-green-100 dark:bg-green-900/30', text: 'Excellent' };
+    if (rate >= 50) return { color: 'text-yellow-600 dark:text-yellow-400', bg: 'bg-yellow-100 dark:bg-yellow-900/30', text: 'Good' };
+    return { color: 'text-orange-600 dark:text-orange-400', bg: 'bg-orange-100 dark:bg-orange-900/30', text: 'Needs Attention' };
   };
 
   const statusStyle = getCheckInStatus();
@@ -114,11 +113,11 @@ export default function StaffDashboard() {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
         <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-slate-200 rounded w-1/4" />
+          <div className="h-8 bg-slate-200 dark:bg-slate-700 rounded w-1/4" />
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {[1, 2, 3, 4].map(i => <div key={i} className="h-24 bg-slate-100 rounded-xl" />)}
+            {[1, 2, 3, 4].map(i => <div key={i} className="h-24 bg-slate-100 dark:bg-slate-800 rounded-xl" />)}
           </div>
-          <div className="h-64 bg-slate-100 rounded-xl" />
+          <div className="h-64 bg-slate-100 dark:bg-slate-800 rounded-xl" />
         </div>
       </div>
     );
@@ -128,27 +127,27 @@ export default function StaffDashboard() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="font-display font-bold text-3xl text-slate-900">
+        <h1 className="font-display font-bold text-3xl text-slate-900 dark:text-slate-100">
           Staff Dashboard
         </h1>
-        <p className="text-slate-500 mt-1">
+        <p className="text-slate-500 dark:text-slate-400 mt-1">
           Welcome, {user?.name?.split(' ')[0]}! Today is {format(new Date(), 'EEEE, MMMM d, yyyy')}
         </p>
       </div>
 
       {/* No Events Today */}
       {events.length === 0 && (
-        <div className="text-center py-16 bg-white rounded-2xl shadow-sm border border-slate-100">
-          <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Calendar className="w-10 h-10 text-slate-400" />
+        <div className="text-center py-16 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700">
+          <div className="w-20 h-20 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Calendar className="w-10 h-10 text-slate-400 dark:text-slate-500" />
           </div>
-          <h2 className="font-display font-bold text-2xl text-slate-700 mb-2">No Events Today</h2>
-          <p className="text-slate-500 mb-6">
+          <h2 className="font-display font-bold text-2xl text-slate-700 dark:text-slate-300 mb-2">No Events Today</h2>
+          <p className="text-slate-500 dark:text-slate-400 mb-6">
             There are no events scheduled for today.
             <br />
             Please check back tomorrow.
           </p>
-          <div className="text-sm text-slate-400">
+          <div className="text-sm text-slate-400 dark:text-slate-500">
             <Clock className="w-4 h-4 inline mr-1" />
             Current time: {format(new Date(), 'h:mm a')}
           </div>
@@ -160,35 +159,35 @@ export default function StaffDashboard() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <div className="card p-5">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-slate-500">Today's Events</span>
-              <Calendar className="w-5 h-5 text-primary-500" />
+              <span className="text-sm text-slate-500 dark:text-slate-400">Today's Events</span>
+              <Calendar className="w-5 h-5 text-primary-500 dark:text-primary-400" />
             </div>
-            <p className="text-3xl font-display font-bold text-slate-900">{stats.todayEventsCount}</p>
+            <p className="text-3xl font-display font-bold text-slate-900 dark:text-slate-100">{stats.todayEventsCount}</p>
           </div>
           
           <div className="card p-5">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-slate-500">Total Attendees</span>
-              <Users className="w-5 h-5 text-blue-500" />
+              <span className="text-sm text-slate-500 dark:text-slate-400">Total Attendees</span>
+              <Users className="w-5 h-5 text-blue-500 dark:text-blue-400" />
             </div>
-            <p className="text-3xl font-display font-bold text-slate-900">{stats.totalAttendees}</p>
+            <p className="text-3xl font-display font-bold text-slate-900 dark:text-slate-100">{stats.totalAttendees}</p>
           </div>
           
           <div className="card p-5">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-slate-500">Checked In</span>
-              <UserCheck className="w-5 h-5 text-green-500" />
+              <span className="text-sm text-slate-500 dark:text-slate-400">Checked In</span>
+              <UserCheck className="w-5 h-5 text-green-500 dark:text-green-400" />
             </div>
-            <p className="text-3xl font-display font-bold text-slate-900">{stats.checkedInCount}</p>
-            <p className="text-xs text-slate-500 mt-1">{stats.remainingToCheckIn} remaining</p>
+            <p className="text-3xl font-display font-bold text-slate-900 dark:text-slate-100">{stats.checkedInCount}</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{stats.remainingToCheckIn} remaining</p>
           </div>
           
           <div className="card p-5">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-slate-500">Check-in Rate</span>
+              <span className="text-sm text-slate-500 dark:text-slate-400">Check-in Rate</span>
               <TrendingUp className={`w-5 h-5 ${statusStyle?.color || 'text-slate-500'}`} />
             </div>
-            <p className={`text-3xl font-display font-bold ${statusStyle?.color || 'text-slate-900'}`}>
+            <p className={`text-3xl font-display font-bold ${statusStyle?.color || 'text-slate-900 dark:text-slate-100'}`}>
               {stats.checkInRate}%
             </p>
             {statusStyle && (
@@ -204,7 +203,7 @@ export default function StaffDashboard() {
         <>
           {/* Event Selection */}
           <div className="mb-6">
-            <label className="block text-sm font-medium text-slate-700 mb-2">Select Event</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Select Event</label>
             <div className="flex flex-wrap gap-3">
               {events.map(event => (
                 <button
@@ -217,7 +216,7 @@ export default function StaffDashboard() {
                   className={`px-4 py-2 rounded-xl font-medium transition-all ${
                     selectedEvent?._id === event._id
                       ? 'bg-primary-600 text-white shadow-md'
-                      : 'bg-white border border-slate-200 text-slate-700 hover:border-primary-300'
+                      : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-primary-300'
                   }`}
                 >
                   {event.title}
@@ -232,13 +231,13 @@ export default function StaffDashboard() {
           {selectedEvent && (
             <>
               {/* Event Info */}
-              <div className="bg-gradient-to-r from-primary-50 to-primary-100 rounded-2xl p-5 mb-6">
+              <div className="bg-gradient-to-r from-primary-50 dark:from-primary-900/50 to-primary-100 dark:to-primary-900/30 rounded-2xl p-5 mb-6">
                 <div className="flex flex-wrap justify-between items-start gap-4">
                   <div>
-                    <h2 className="font-display font-bold text-xl text-slate-900">
+                    <h2 className="font-display font-bold text-xl text-slate-900 dark:text-slate-100">
                       {selectedEvent.title}
                     </h2>
-                    <div className="flex flex-wrap gap-4 mt-2 text-sm text-slate-600">
+                    <div className="flex flex-wrap gap-4 mt-2 text-sm text-slate-600 dark:text-slate-300">
                       <span className="flex items-center gap-1">
                         <Clock className="w-4 h-4" />
                         {selectedEvent.startTime} - {selectedEvent.endTime}
@@ -250,10 +249,10 @@ export default function StaffDashboard() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-2xl font-bold text-primary-600">
+                    <div className="text-2xl font-bold text-primary-600 dark:text-primary-400">
                       {attendees.filter(a => a.checkedIn).length}/{attendees.length}
                     </div>
-                    <div className="text-xs text-slate-500">Checked In</div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400">Checked In</div>
                   </div>
                 </div>
               </div>
@@ -264,7 +263,7 @@ export default function StaffDashboard() {
                   <h3 className="font-display font-bold text-lg">Quick Check-in</h3>
                   <button
                     onClick={() => setSearchMode(!searchMode)}
-                    className="text-sm text-primary-600 hover:text-primary-700"
+                    className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300"
                   >
                     {searchMode ? 'Cancel' : 'Scan Ticket'}
                   </button>
@@ -273,7 +272,7 @@ export default function StaffDashboard() {
                 {searchMode ? (
                   <form onSubmit={handleCheckInByTicket} className="flex gap-3">
                     <div className="flex-1 relative">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
                       <input
                         type="text"
                         value={ticketNumber}
@@ -292,7 +291,7 @@ export default function StaffDashboard() {
                     </button>
                   </form>
                 ) : (
-                  <p className="text-sm text-slate-500 text-center py-4">
+                  <p className="text-sm text-slate-500 dark:text-slate-400 text-center py-4">
                     Click "Scan Ticket" to check in attendees by ticket number
                   </p>
                 )}
@@ -300,53 +299,53 @@ export default function StaffDashboard() {
 
               {/* Attendees List */}
               <div className="card overflow-hidden">
-                <div className="p-5 border-b border-slate-100">
+                <div className="p-5 border-b border-slate-100 dark:border-slate-700">
                   <h3 className="font-display font-bold text-lg">Attendees</h3>
-                  <p className="text-sm text-slate-500">
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
                     {attendees.filter(a => a.checkedIn).length} checked in of {attendees.length}
                   </p>
                 </div>
                 
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
-                    <thead className="bg-slate-50 border-b border-slate-100">
+                    <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700">
                       <tr>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wide">Status</th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wide">Ticket #</th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wide">Name</th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wide">Email</th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wide">Department</th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wide">Action</th>
+                        <th className="text-left py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Status</th>
+                        <th className="text-left py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Ticket #</th>
+                        <th className="text-left py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Name</th>
+                        <th className="text-left py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Email</th>
+                        <th className="text-left py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Department</th>
+                        <th className="text-left py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Action</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-50">
+                    <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
                       {attendees.map(attendee => (
-                        <tr key={attendee._id} className="hover:bg-slate-50">
+                        <tr key={attendee._id} className="hover:bg-slate-50 dark:hover:bg-slate-700">
                           <td className="py-3 px-4">
                             {attendee.checkedIn ? (
-                              <span className="inline-flex items-center gap-1 text-green-600">
+                              <span className="inline-flex items-center gap-1 text-green-600 dark:text-green-400">
                                 <CheckCircle className="w-4 h-4" />
                                 <span className="text-xs">✓ In</span>
                               </span>
                             ) : (
-                              <span className="inline-flex items-center gap-1 text-slate-400">
+                              <span className="inline-flex items-center gap-1 text-slate-400 dark:text-slate-500">
                                 <Clock className="w-4 h-4" />
                                 <span className="text-xs">Pending</span>
                               </span>
                             )}
                           </td>
                           <td className="py-3 px-4">
-                            <code className="text-xs bg-slate-100 px-1.5 py-0.5 rounded">
+                            <code className="text-xs bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded">
                               {attendee.ticketNumber}
                             </code>
                           </td>
-                          <td className="py-3 px-4 font-medium text-slate-900">
+                          <td className="py-3 px-4 font-medium text-slate-900 dark:text-slate-100">
                             {attendee.user?.name}
                           </td>
-                          <td className="py-3 px-4 text-slate-500">
+                          <td className="py-3 px-4 text-slate-500 dark:text-slate-400">
                             {attendee.user?.email}
                           </td>
-                          <td className="py-3 px-4 text-slate-500">
+                          <td className="py-3 px-4 text-slate-500 dark:text-slate-400">
                             {attendee.user?.department || '—'}
                           </td>
                           <td className="py-3 px-4">
@@ -359,7 +358,7 @@ export default function StaffDashboard() {
                                 Check In
                               </button>
                             ) : (
-                              <span className="text-xs text-green-600">
+                              <span className="text-xs text-green-600 dark:text-green-400">
                                 {attendee.checkedInAt && format(new Date(attendee.checkedInAt), 'h:mm a')}
                               </span>
                             )}
@@ -372,8 +371,8 @@ export default function StaffDashboard() {
 
                 {attendees.length === 0 && (
                   <div className="text-center py-12">
-                    <Users className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                    <p className="text-slate-500">No attendees registered for this event yet</p>
+                    <Users className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
+                    <p className="text-slate-500 dark:text-slate-400">No attendees registered for this event yet</p>
                   </div>
                 )}
               </div>

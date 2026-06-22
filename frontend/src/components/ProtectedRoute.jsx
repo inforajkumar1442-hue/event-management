@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 // Loading spinner component
 const LoadingSpinner = () => (
   <div className="min-h-screen flex items-center justify-center">
-    <div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
+    <div className="w-8 h-8 border-4 border-primary-500 dark:border-primary-400 border-t-transparent rounded-full animate-spin" />
   </div>
 );
 

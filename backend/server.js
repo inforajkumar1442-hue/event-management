@@ -11,7 +11,10 @@ import rateLimit from 'express-rate-limit';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import logger, { stream } from './utils/logger.js';
-import fs from 'fs';
+import cron from 'node-cron';
+import { sendEventReminders } from './utils/eventReminder.js';
+import { protect } from './middleware/auth.js';
+import { adminOnly } from './middleware/admin.js';
 import staffRoutes from './routes/staff.js';
 
 import authRoutes from './routes/auth.js';
@@ -19,10 +22,12 @@ import eventRoutes from './routes/events.js';
 import registrationRoutes from './routes/registrations.js';
 import adminRoutes from './routes/admin.js';
 import Event from './models/Event.js';
+import Registration from './models/Registration.js';
 import paymentRoutes from './routes/payments.js';
+import notificationRoutes from './routes/notifications.js';
+import couponRoutes from './routes/coupons.js';
 
 import User from './models/User.js';
-import Registration from './models/Registration.js';
 
 
 
@@ -31,23 +36,21 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 
-// ─── Create Required Directories ────────────────────────────────────────────
-const logDir = './logs';
-if (!fs.existsSync(logDir)) {
-  fs.mkdirSync(logDir, { recursive: true });
-  console.log('📁 Logs directory created');
-}
-
-// Create uploads directory if it doesn't exist
 const uploadsDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-  console.log('📁 Uploads directory created');
-}
 
 // ─── CORS Configuration ──────────────────────────────────────────────────────
+const allowedOrigins = process.env.FRONTEND_URL
+  ? process.env.FRONTEND_URL.split(',').map(s => s.trim())
+  : ['http://localhost:5173', 'http://localhost:3000'];
+
 const corsOptions = {
-  origin: true,
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV !== 'production') {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: [
@@ -56,7 +59,6 @@ const corsOptions = {
     'X-Requested-With',
     'Accept',
     'Origin',
-    'X-CSRF-Token'
   ],
   exposedHeaders: ['Content-Length', 'X-Total-Count'],
   maxAge: 86400,
@@ -65,9 +67,24 @@ const corsOptions = {
 };
 
 // ─── Security Middleware ────────────────────────────────────────────────────
+const isProduction = process.env.NODE_ENV === 'production';
 app.use(
   helmet({
     crossOriginResourcePolicy: false,
+    contentSecurityPolicy: isProduction ? {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", 'data:', 'blob:'],
+        connectSrc: ["'self'", process.env.FRONTEND_URL || 'http://localhost:5173'],
+        fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+        frameSrc: ["'none'"],
+      },
+    } : false,
+    frameguard: { action: 'deny' },
+    hsts: isProduction ? { maxAge: 31536000, includeSubDomains: true, preload: true } : false,
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
   })
 );
 app.use(cors(corsOptions));
@@ -79,14 +96,21 @@ app.use((req, res, next) => {
   next();
 });
 
+// Shared rate limit handler for logging
+const rateLimitHandler = (limiterName) => (req, res, next, options) => {
+  logger.warn(`Rate limit exceeded on ${limiterName}: IP ${req.ip}, path ${req.originalUrl}`);
+  res.status(429).json(options.message);
+};
+
 // Global Rate Limiter for all API routes
 const globalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
+  windowMs: 15 * 60 * 1000,
   max: 200,
   message: { message: 'Too many requests, please try again later.' },
   standardHeaders: true,
   legacyHeaders: false,
   skipSuccessfulRequests: false,
+  handler: rateLimitHandler('global'),
 });
 app.use('/api/', globalLimiter);
 
@@ -98,9 +122,21 @@ const authLimiter = rateLimit({
   message: { message: 'Too many login attempts, please try again later.' },
   standardHeaders: true,
   legacyHeaders: false,
+  handler: rateLimitHandler('auth'),
 });
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
+
+// Resend verification rate limiter
+const resendVerificationLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 3,
+  message: { message: 'Too many verification requests. Please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: rateLimitHandler('resend-verification'),
+});
+app.use('/api/auth/resend-verification', resendVerificationLimiter);
 
 // Stricter limiter for admin routes
 const adminLimiter = rateLimit({
@@ -108,10 +144,31 @@ const adminLimiter = rateLimit({
   max: 100,
   message: { message: 'Too many admin requests, please slow down.' },
   skipSuccessfulRequests: false,
+  handler: rateLimitHandler('admin'),
 });
 app.use('/api/admin', adminLimiter);
 
+// Password reset rate limiter (tight — prevents email bombing)
+const passwordResetLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 3,
+  message: { message: 'Too many password reset requests. Please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: rateLimitHandler('forgot-password'),
+});
+app.use('/api/auth/forgot-password', passwordResetLimiter);
 
+// Reset token submission rate limiter (prevents brute force)
+const resetPasswordLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { message: 'Too many reset attempts. Please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: rateLimitHandler('reset-password'),
+});
+app.use('/api/auth/reset-password', resetPasswordLimiter);
 
 // ─── General Middleware ─────────────────────────────────────────────────────
 // Stripe webhook raw body parsing is handled in payments.js route
@@ -130,6 +187,18 @@ app.use('/api/registrations', registrationRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/staff', staffRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/coupons', couponRoutes);
+
+// Manual trigger for event reminders (admin only)
+app.post('/api/admin/trigger-reminders', protect, adminOnly, async (req, res) => {
+  try {
+    const count = await sendEventReminders();
+    res.json({ message: `Reminders sent`, count });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to send reminders' });
+  }
+});
 
 // ─── Health Check ───────────────────────────────────────────────────────────
 app.get('/api/health', (req, res) => {
@@ -291,6 +360,19 @@ const startServer = async () => {
 
     // Update event statuses every hour
     setInterval(updateEventStatuses, 60 * 60 * 1000);
+
+    // Schedule event reminders daily at 9:00 AM
+    cron.schedule('0 9 * * *', () => {
+      logger.info('⏰ Running scheduled event reminders...');
+      sendEventReminders();
+    });
+    logger.info('⏰ Event reminders scheduled daily at 9:00 AM');
+
+    // Also run reminders on startup (with 10s delay to let server settle)
+    setTimeout(() => {
+      logger.info('⏰ Running startup event reminders...');
+      sendEventReminders();
+    }, 10000);
 
     // Start the server
     const PORT = process.env.PORT || 5000;

@@ -71,6 +71,17 @@ const eventSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    ticketTypes: [
+      {
+        name: { type: String, required: true, trim: true },
+        description: { type: String, trim: true },
+        price: { type: Number, default: 0, min: 0 },
+        capacity: { type: Number, required: true, min: 1 },
+        registeredCount: { type: Number, default: 0, min: 0 },
+        isFree: { type: Boolean, default: true },
+        isActive: { type: Boolean, default: true },
+      },
+    ],
     tags: [{ type: String, trim: true }],
     status: {
       type: String,
@@ -113,11 +124,21 @@ const eventSchema = new mongoose.Schema(
 
 // Spots left
 eventSchema.virtual('spotsLeft').get(function () {
+  if (this.ticketTypes && this.ticketTypes.length > 0) {
+    const total = this.ticketTypes.reduce((s, t) => s + t.capacity, 0);
+    const registered = this.ticketTypes.reduce((s, t) => s + (t.registeredCount || 0), 0);
+    return Math.max(0, total - registered);
+  }
   return Math.max(0, this.capacity - (this.registeredCount || 0));
 });
 
 // Is full
 eventSchema.virtual('isFull').get(function () {
+  if (this.ticketTypes && this.ticketTypes.length > 0) {
+    const total = this.ticketTypes.reduce((s, t) => s + t.capacity, 0);
+    const registered = this.ticketTypes.reduce((s, t) => s + (t.registeredCount || 0), 0);
+    return registered >= total;
+  }
   return (this.registeredCount || 0) >= this.capacity;
 });
 
@@ -192,5 +213,8 @@ eventSchema.index({ isFree: 1, status: 1, startDate: 1 });
 eventSchema.index({ endDate: 1, status: 1 });
 eventSchema.index({ isPublished: 1, status: 1, startDate: 1 });
 eventSchema.index({ createdAt: -1 });
+
+// Text index for full-text search
+eventSchema.index({ title: 'text', description: 'text', tags: 'text', venue: 'text' });
 
 export default mongoose.model('Event', eventSchema);

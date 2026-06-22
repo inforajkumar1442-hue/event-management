@@ -6,7 +6,7 @@
  *
  * Usage:
  *   ADMIN_NAME="Admin" ADMIN_EMAIL="admin@example.com" ADMIN_PASSWORD="secret123" \
- *     node ./seeder/Adminseeder.js
+ *     node ./seeder/adminSeeder.js
  *
  * Or add them to your .env file and run:
  *   npm run admin:seeder

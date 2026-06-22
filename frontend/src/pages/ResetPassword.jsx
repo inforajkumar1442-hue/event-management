@@ -28,7 +28,10 @@ export default function ResetPassword() {
     setLoading(true);
     try {
       const { data } = await api.post(`/auth/reset-password/${token}`, { password });
-      login(data.user.email, password);
+      if (data.token) {
+        localStorage.setItem('token', data.token);
+        login(data.user.email, password);
+      }
       toast.success('Password reset successful!');
       setResetDone(true);
       setTimeout(() => navigate('/dashboard'), 1500);
@@ -43,11 +46,11 @@ export default function ResetPassword() {
     return (
       <div className="min-h-[calc(100vh-64px)] flex items-center justify-center px-6 py-12">
         <div className="w-full max-w-md text-center">
-          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
             <CheckCircle className="w-8 h-8 text-green-600" />
           </div>
-          <h1 className="font-display font-bold text-2xl text-slate-900 mb-2">Password Reset!</h1>
-          <p className="text-slate-500">Redirecting to your dashboard...</p>
+          <h1 className="font-display font-bold text-2xl text-slate-900 dark:text-slate-100 mb-2">Password Reset!</h1>
+          <p className="text-slate-500 dark:text-slate-400">Redirecting to your dashboard...</p>
         </div>
       </div>
     );
@@ -57,14 +60,14 @@ export default function ResetPassword() {
     <div className="min-h-[calc(100vh-64px)] flex items-center justify-center px-6 py-12">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
-          <h1 className="font-display font-bold text-3xl text-slate-900 mb-2">Set New Password</h1>
-          <p className="text-slate-500">Enter your new password below</p>
+          <h1 className="font-display font-bold text-3xl text-slate-900 dark:text-slate-100 mb-2">Set New Password</h1>
+          <p className="text-slate-500 dark:text-slate-400">Enter your new password below</p>
         </div>
 
         <div className="card p-8">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                 New Password <span className="text-red-500">*</span>
               </label>
               <div className="relative">
@@ -79,7 +82,7 @@ export default function ResetPassword() {
                 <button
                   type="button"
                   onClick={() => setShowPass(!showPass)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"
                 >
                   {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -92,13 +95,14 @@ export default function ResetPassword() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                 Confirm Password <span className="text-red-500">*</span>
               </label>
               <input
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
+                onPaste={(e) => e.preventDefault()}
                 className="input"
                 placeholder="Repeat your password"
                 required
@@ -120,7 +124,7 @@ export default function ResetPassword() {
           </form>
         </div>
 
-        <p className="text-center text-sm text-slate-500 mt-6">
+        <p className="text-center text-sm text-slate-500 dark:text-slate-400 mt-6">
           <Link to="/login" className="text-primary-600 font-semibold hover:underline">Back to Login</Link>
         </p>
       </div>

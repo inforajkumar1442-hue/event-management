@@ -184,15 +184,15 @@ export default function Register() {
     <div className="min-h-[calc(100vh-64px)] flex items-center justify-center px-6 py-12">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
-          <h1 className="font-display font-bold text-3xl text-slate-900 mb-2">Create account</h1>
-          <p className="text-slate-500">Join EventGather and start discovering amazing events</p>
+          <h1 className="font-display font-bold text-3xl text-slate-900 dark:text-slate-100 mb-2">Create account</h1>
+          <p className="text-slate-500 dark:text-slate-400">Join EventGather and start discovering amazing events</p>
         </div>
 
         <div className="card p-8">
           <form onSubmit={onSubmit} className="space-y-4">
             {/* Name Field - Updated success message */}
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                 Full Name <span className="text-red-500">*</span>
               </label>
               <div className="relative">
@@ -227,7 +227,7 @@ export default function Register() {
 
             {/* Email Field */}
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                 Email <span className="text-red-500">*</span>
               </label>
               <div className="relative">
@@ -262,7 +262,7 @@ export default function Register() {
             {/* Department and Phone Row - BOTH REQUIRED NOW */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                   Department <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -281,7 +281,7 @@ export default function Register() {
                 )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                   Phone Number <span className="text-red-500">*</span>  {/* ← Added red star */}
                 </label>
                 <input
@@ -308,7 +308,7 @@ export default function Register() {
 
             {/* Password Field */}
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                 Password <span className="text-red-500">*</span>
               </label>
               <div className="relative">
@@ -326,7 +326,7 @@ export default function Register() {
                 <button
                   type="button"
                   onClick={() => setShowPass(!showPass)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"
                 >
                   {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -334,21 +334,21 @@ export default function Register() {
 
               {touched.password && formData.password && (
                 <div className="mt-2 space-y-1">
-                  <p className="text-xs font-medium text-slate-600">Password requirements:</p>
+                  <p className="text-xs font-medium text-slate-600 dark:text-slate-300">Password requirements:</p>
                   <div className="flex flex-wrap gap-2">
-                    <span className={`text-xs px-2 py-0.5 rounded ${formData.password.length >= 6 ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+                    <span className={`text-xs px-2 py-0.5 rounded ${formData.password.length >= 6 ? 'bg-green-100 text-green-700' : 'bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-300'
                       }`}>
                       {formData.password.length >= 6 ? '✓' : '○'} 6+ characters
                     </span>
-                    <span className={`text-xs px-2 py-0.5 rounded ${/[A-Z]/.test(formData.password) ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+                    <span className={`text-xs px-2 py-0.5 rounded ${/[A-Z]/.test(formData.password) ? 'bg-green-100 text-green-700' : 'bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-300'
                       }`}>
                       {/[A-Z]/.test(formData.password) ? '✓' : '○'} Uppercase
                     </span>
-                    <span className={`text-xs px-2 py-0.5 rounded ${/[a-z]/.test(formData.password) ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+                    <span className={`text-xs px-2 py-0.5 rounded ${/[a-z]/.test(formData.password) ? 'bg-green-100 text-green-700' : 'bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-300'
                       }`}>
                       {/[a-z]/.test(formData.password) ? '✓' : '○'} Lowercase
                     </span>
-                    <span className={`text-xs px-2 py-0.5 rounded ${/[0-9]/.test(formData.password) ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+                    <span className={`text-xs px-2 py-0.5 rounded ${/[0-9]/.test(formData.password) ? 'bg-green-100 text-green-700' : 'bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-300'
                       }`}>
                       {/[0-9]/.test(formData.password) ? '✓' : '○'} Number
                     </span>
@@ -357,7 +357,7 @@ export default function Register() {
                   {passwordStrength && (
                     <div className="mt-2">
                       <div className="flex items-center gap-2">
-                        <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                        <div className="flex-1 h-1.5 bg-gray-200 dark:bg-slate-700 rounded-full overflow-hidden">
                           <div
                             className={`h-full transition-all duration-300 ${passwordStrength.text === 'Weak' ? 'bg-red-500' :
                               passwordStrength.text === 'Medium' ? 'bg-yellow-500' : 'bg-green-500'
@@ -383,7 +383,7 @@ export default function Register() {
 
             {/* Confirm Password Field */}
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                 Confirm Password <span className="text-red-500">*</span>
               </label>
               <div className="relative">
@@ -393,6 +393,7 @@ export default function Register() {
                   value={formData.confirmPassword}
                   onChange={handleChange}
                   onBlur={handleBlur}
+                  onPaste={(e) => e.preventDefault()}
                   className={`input pr-10 ${touched.confirmPassword && !errors.confirmPassword && formData.confirmPassword ? 'border-green-500' :
                     touched.confirmPassword && errors.confirmPassword ? 'border-red-500' : ''
                     }`}
@@ -401,7 +402,7 @@ export default function Register() {
                 <button
                   type="button"
                   onClick={() => setShowConfirmPass(!showConfirmPass)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"
                 >
                   {showConfirmPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -427,7 +428,7 @@ export default function Register() {
           </form>
         </div>
 
-        <p className="text-center text-sm text-slate-500 mt-6">
+        <p className="text-center text-sm text-slate-500 dark:text-slate-400 mt-6">
           Already have an account?{' '}
           <Link to="/login" className="text-primary-600 font-semibold hover:underline">Sign in</Link>
         </p>

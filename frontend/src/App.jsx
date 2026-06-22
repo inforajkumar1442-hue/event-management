@@ -1,7 +1,8 @@
 // frontend/src/App.jsx
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
 import { ProtectedRoute, AdminRoute, StaffRoute } from './components/ProtectedRoute';
 import ErrorBoundary from './components/ErrorBoundary';
 import Navbar from './components/Navbar';
@@ -17,7 +18,9 @@ import UserDashboard from './pages/UserDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import Profile from './pages/Profile';
 import PaymentSuccess from './pages/PaymentSuccess';
+import TicketPublic from './pages/TicketPublic';
 import StaffDashboard from './pages/StaffDashboard';
+import VerifyEmail from './pages/VerifyEmail';
 import NotFound from './pages/NotFound';
 
 export default function App() {
@@ -28,6 +31,7 @@ export default function App() {
         v7_relativeSplatPath: true,
       }}
     >
+      <ThemeProvider>
       <AuthProvider>
         <div className="min-h-screen flex flex-col">
           <Navbar />
@@ -62,6 +66,12 @@ export default function App() {
                 <Route path="/admin" element={<AdminDashboard />} />
               </Route>
 
+              {/* Email Verification */}
+              <Route path="/verify-email/:token" element={<VerifyEmail />} />
+
+              {/* Public Ticket Page - for QR code scanning */}
+              <Route path="/ticket/:id" element={<TicketPublic />} />
+
               {/* 404 Fallback */}
               <Route path="*" element={<NotFound />} />
             </Routes>
@@ -93,6 +103,7 @@ export default function App() {
           }}
         />
       </AuthProvider>
+      </ThemeProvider>
     </BrowserRouter>
   );
 }

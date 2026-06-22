@@ -30,18 +30,18 @@ export default function ForgotPassword() {
     <div className="min-h-[calc(100vh-64px)] flex items-center justify-center px-6 py-12">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
-          <h1 className="font-display font-bold text-3xl text-slate-900 mb-2">Reset Password</h1>
-          <p className="text-slate-500">Enter your email and we'll send you a reset link</p>
+          <h1 className="font-display font-bold text-3xl text-slate-900 dark:text-slate-100 mb-2">Reset Password</h1>
+          <p className="text-slate-500 dark:text-slate-400">Enter your email and we'll send you a reset link</p>
         </div>
 
         <div className="card p-8">
           {sent ? (
             <div className="text-center py-6">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
                 <CheckCircle className="w-8 h-8 text-green-600" />
               </div>
-              <h2 className="font-display font-bold text-xl text-slate-900 mb-2">Check your inbox</h2>
-              <p className="text-slate-500 text-sm">
+              <h2 className="font-display font-bold text-xl text-slate-900 dark:text-slate-100 mb-2">Check your inbox</h2>
+              <p className="text-slate-500 dark:text-slate-400 text-sm">
                 If an account exists for <strong>{email}</strong>, you'll receive a password reset link shortly.
               </p>
               <Link to="/login" className="btn-primary inline-block mt-6 text-sm">
@@ -51,11 +51,11 @@ export default function ForgotPassword() {
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                   Email Address <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
                   <input
                     type="email"
                     value={email}
@@ -67,14 +67,14 @@ export default function ForgotPassword() {
                 </div>
               </div>
 
-              <div className="flex items-start gap-2 text-xs text-slate-500 bg-slate-50 rounded-lg p-3">
+              <div className="flex items-start gap-2 text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 rounded-lg p-3">
                 <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                 <span>Enter the email address you used to create your account.</span>
               </div>
 
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || !email.trim()}
                 className="btn-primary w-full py-3 text-base"
               >
                 {loading ? 'Sending...' : 'Send Reset Link'}
@@ -83,7 +83,7 @@ export default function ForgotPassword() {
           )}
         </div>
 
-        <p className="text-center text-sm text-slate-500 mt-6">
+        <p className="text-center text-sm text-slate-500 dark:text-slate-400 mt-6">
           Remember your password?{' '}
           <Link to="/login" className="text-primary-600 font-semibold hover:underline">Sign in</Link>
         </p>

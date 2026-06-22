@@ -40,6 +40,10 @@ const registrationSchema = new mongoose.Schema(
     paymentId: {
       type: String,
     },
+    ticketTypeName: {
+      type: String,
+      trim: true,
+    },
     ticketNumber: {
       type: String,
       unique: true,

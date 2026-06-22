@@ -7,54 +7,58 @@ import logger from '../utils/logger.js';
 
 // @GET /api/admin/stats
 export const getDashboardStats = async (req, res) => {
-  const [
-    totalUsers,
-    totalEvents,
-    totalRegistrations,
-    upcomingEvents,
-    recentRegistrations,
-    eventsByCategory,
-    monthlyRegistrations,
-  ] = await Promise.all([
-    User.countDocuments({ role: 'user' }),
-    Event.countDocuments(),
-    Registration.countDocuments({ status: { $in: ['confirmed', 'attended'] } }),
-    Event.countDocuments({ status: 'upcoming', startDate: { $gte: new Date() } }),
+  try {
+    const [
+      totalUsers,
+      totalEvents,
+      totalRegistrations,
+      upcomingEvents,
+      recentRegistrations,
+      eventsByCategory,
+      monthlyRegistrations,
+    ] = await Promise.all([
+      User.countDocuments({ role: 'user' }),
+      Event.countDocuments(),
+      Registration.countDocuments({ status: { $in: ['confirmed', 'attended'] } }),
+      Event.countDocuments({ status: 'upcoming', startDate: { $gte: new Date() } }),
 
-    // Fix: populate event with startDate (not the virtual 'date')
-    Registration.find({ status: { $in: ['confirmed', 'attended'] } })
-      .populate('user', 'name email')
-      .populate('event', 'title startDate venue')
-      .sort('-createdAt')
-      .limit(10),
+      Registration.find({ status: { $in: ['confirmed', 'attended'] } })
+        .populate('user', 'name email')
+        .populate('event', 'title startDate venue')
+        .sort('-createdAt')
+        .limit(10),
 
-    Event.aggregate([
-      { $group: { _id: '$category', count: { $sum: 1 } } },
-      { $sort: { count: -1 } },
-    ]),
-    Registration.aggregate([
-      {
-        $match: {
-          createdAt: { $gte: new Date(new Date().setMonth(new Date().getMonth() - 6)) },
-          status: { $in: ['confirmed', 'attended'] },
+      Event.aggregate([
+        { $group: { _id: '$category', count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+      ]),
+      Registration.aggregate([
+        {
+          $match: {
+            createdAt: { $gte: new Date(new Date().setMonth(new Date().getMonth() - 6)) },
+            status: { $in: ['confirmed', 'attended'] },
+          },
         },
-      },
-      {
-        $group: {
-          _id: { $dateToString: { format: '%Y-%m', date: '$createdAt' } },
-          count: { $sum: 1 },
+        {
+          $group: {
+            _id: { $dateToString: { format: '%Y-%m', date: '$createdAt' } },
+            count: { $sum: 1 },
+          },
         },
-      },
-      { $sort: { _id: 1 } },
-    ]),
-  ]);
+        { $sort: { _id: 1 } },
+      ]),
+    ]);
 
-  res.json({
-    stats: { totalUsers, totalEvents, totalRegistrations, upcomingEvents },
-    recentRegistrations,
-    eventsByCategory,
-    monthlyRegistrations,
-  });
+    res.json({
+      stats: { totalUsers, totalEvents, totalRegistrations, upcomingEvents },
+      recentRegistrations,
+      eventsByCategory,
+      monthlyRegistrations,
+    });
+  } catch (error) {
+    logger.error('Error fetching dashboard stats:', error);
+    res.status(500).json({ message: 'Failed to load dashboard' });
+  }
 };
 
 // @PUT /api/admin/users/staff/:id/toggle
@@ -140,7 +144,10 @@ export const toggleUserStatus = async (req, res) => {
 export const changeUserRole = async (req, res) => {
   try {
     const { role } = req.body;
-    const user = await User.findByIdAndUpdate(req.params.id, { role }, { new: true });
+    if (!['user', 'admin', 'staff'].includes(role)) {
+      return res.status(400).json({ message: 'Invalid role' });
+    }
+    const user = await User.findByIdAndUpdate(req.params.id, { role }, { new: true, runValidators: true });
     if (!user) return res.status(404).json({ message: 'User not found' });
     res.json({ message: 'Role updated', user });
   } catch (error) {
@@ -221,6 +228,26 @@ export const deleteUser = async (req, res) => {
     const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ message: 'User not found' });
     if (user.role === 'admin') return res.status(403).json({ message: 'Cannot delete admin' });
+
+    // Decrement event counts for all confirmed/attended registrations
+    const activeRegs = await Registration.find({
+      user: req.params.id,
+      status: { $in: ['confirmed', 'attended'] },
+    });
+
+    for (const reg of activeRegs) {
+      if (reg.ticketTypeName) {
+        await Event.updateOne(
+          { _id: reg.event, 'ticketTypes.name': reg.ticketTypeName },
+          { $inc: { 'ticketTypes.$.registeredCount': -1, registeredCount: -1 } }
+        );
+      } else {
+        await Event.updateOne(
+          { _id: reg.event },
+          { $inc: { registeredCount: -1 } }
+        );
+      }
+    }
 
     await Registration.deleteMany({ user: req.params.id });
     await user.deleteOne();

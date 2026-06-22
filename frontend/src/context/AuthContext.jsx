@@ -1,4 +1,4 @@
-import { createContext, useState, useContext, useEffect } from 'react';
+import { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import api from '../api/axios';
 
 const AuthContext = createContext(null);
@@ -7,16 +7,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      fetchUser();
-    } else {
-      setLoading(false);
-    }
-  }, []);
-
-  const fetchUser = async () => {
+  const fetchUser = useCallback(async () => {
     try {
       const { data } = await api.get('/auth/me');
       setUser(data.user);
@@ -25,11 +16,21 @@ export const AuthProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      fetchUser();
+    } else {
+      setLoading(false);
+    }
+  }, [fetchUser]);
 
   const login = async (email, password) => {
     const { data } = await api.post('/auth/login', { email, password });
     localStorage.setItem('token', data.token);
+    sessionStorage.setItem('justLoggedIn', 'true');
     setUser(data.user);
     return data.user;
   };
@@ -50,8 +51,16 @@ export const AuthProvider = ({ children }) => {
     setUser(updatedUser);
   };
 
+  const resendVerification = async () => {
+    try {
+      await api.post('/auth/resend-verification');
+    } catch {
+      // errors handled by toast in Navbar
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, updateUser }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, updateUser, fetchUser, resendVerification }}>
       {children}
     </AuthContext.Provider>
   );

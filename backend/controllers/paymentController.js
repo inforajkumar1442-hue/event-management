@@ -2,15 +2,18 @@ import stripe from '../config/stripe.js';
 import Event from '../models/Event.js';
 import Registration from '../models/Registration.js';
 import User from '../models/User.js';
+import Coupon from '../models/Coupon.js';
 import { generateQRCode } from '../utils/qrCode.js';
 import { sendRegistrationConfirmation } from '../utils/email.js';
 import logger from '../utils/logger.js';
+import { createNotification } from './notificationController.js';
 
 // @POST /api/payments/create-checkout-session/:eventId
 export const createCheckoutSession = async (req, res) => {
   try {
     const { eventId } = req.params;
     const userId = req.user._id;
+    const { ticketTypeName } = req.body;
 
     const event = await Event.findById(eventId);
     if (!event) {
@@ -18,88 +21,108 @@ export const createCheckoutSession = async (req, res) => {
       return res.status(404).json({ message: 'Event not found' });
     }
 
-    if (event.isFree || event.price === 0) {
+    // Determine price based on ticket type
+    let price = event.price;
+    let isFree = event.isFree;
+    let selectedTicketType = null;
+
+    if (event.ticketTypes && event.ticketTypes.length > 0) {
+      if (!ticketTypeName) {
+        return res.status(400).json({ message: 'Please select a ticket type' });
+      }
+      selectedTicketType = event.ticketTypes.find(t => t.name === ticketTypeName && t.isActive);
+      if (!selectedTicketType) {
+        return res.status(400).json({ message: 'Invalid ticket type' });
+      }
+      price = selectedTicketType.price;
+      isFree = selectedTicketType.isFree;
+    }
+
+    if (isFree || price === 0) {
       logger.warn(`Payment session creation failed: Event ${eventId} is free`);
       return res.status(400).json({ message: 'This event is free. Please register normally.' });
     }
 
     // Check for existing confirmed registration
-    let existingRegistration = await Registration.findOne({
+    const existingConfirmed = await Registration.findOne({
       user: userId,
       event: eventId,
+      status: 'confirmed',
     });
 
-    if (existingRegistration && existingRegistration.status === 'confirmed') {
+    if (existingConfirmed) {
       logger.warn(`User ${userId} already registered for event ${eventId}`);
       return res.status(409).json({
         message: 'You are already registered for this event',
-        status: existingRegistration.status
+        status: existingConfirmed.status
       });
     }
 
-    // If there's an existing pending payment, reuse it
-    if (existingRegistration && existingRegistration.status === 'pending_payment') {
-      logger.info(`Found existing pending registration for user ${userId}, event ${eventId}, reusing...`);
+    // Clean up any stale pending_payment or cancelled registrations
+    await Registration.deleteMany({
+      user: userId,
+      event: eventId,
+      status: { $in: ['pending_payment', 'cancelled'] },
+    });
 
-      const user = await User.findById(userId);
-      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-
-      const session = await stripe.checkout.sessions.create({
-        payment_method_types: ['card'],
-        mode: 'payment',
-        success_url: `${frontendUrl}/payment-success?session_id={CHECKOUT_SESSION_ID}&event_id=${eventId}&reg_id=${existingRegistration._id}`,
-        cancel_url: `${frontendUrl}/events/${eventId}?payment_cancelled=true`,
-        customer_email: user.email,
-        metadata: {
-          eventId: eventId.toString(),
-          userId: userId.toString(),
-          registrationId: existingRegistration._id.toString(),
-          eventTitle: event.title,
-        },
-        line_items: [
-          {
-            price_data: {
-              currency: 'inr',
-              product_data: {
-                name: event.title,
-                description: `Event ticket for ${event.title}`,
-              },
-              unit_amount: Math.round(event.price * 100),
-            },
-            quantity: 1,
-          },
-        ],
+    // Atomically check capacity before creating payment session
+    let capacityAvailable;
+    if (selectedTicketType) {
+      capacityAvailable = await Event.findOne({
+        _id: eventId,
+        'ticketTypes.name': selectedTicketType.name,
+        $expr: { $lt: [{ $arrayElemAt: ['$ticketTypes.registeredCount', { $indexOfArray: ['$ticketTypes.name', selectedTicketType.name] }] }, { $arrayElemAt: ['$ticketTypes.capacity', { $indexOfArray: ['$ticketTypes.name', selectedTicketType.name] }] }] },
       });
-
-      existingRegistration.paymentId = session.id;
-      await existingRegistration.save();
-
-      logger.info(`Stripe checkout session created for user ${userId}, event ${event.title}, session ${session.id}`);
-      return res.json({ sessionId: session.id, sessionUrl: session.url });
+    } else {
+      capacityAvailable = await Event.findOne({
+        _id: eventId,
+        $expr: { $lt: ['$registeredCount', '$capacity'] },
+      });
     }
 
-    // No existing registration - create new one
+    if (!capacityAvailable) {
+      logger.warn(`Payment session creation failed: Event ${eventId} is full`);
+      return res.status(400).json({ message: 'Event is full. No spots available.' });
+    }
+
     const user = await User.findById(userId);
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
 
-    const registration = await Registration.create({
-      user: userId,
-      event: eventId,
-      status: 'pending_payment',
-      paymentStatus: 'pending',
-    });
+    // Handle coupon code
+    const { couponCode } = req.body;
+    let finalPrice = price;
+    let appliedCoupon = null;
+
+    if (couponCode) {
+      const coupon = await Coupon.findOne({ code: couponCode.toUpperCase().trim() });
+      if (coupon && coupon.isActive && (!coupon.expiresAt || new Date(coupon.expiresAt) > new Date()) &&
+          (coupon.maxUses === 0 || coupon.currentUses < coupon.maxUses) &&
+          (!coupon.event || coupon.event.toString() === eventId)) {
+        let discount = 0;
+        if (coupon.discountType === 'percentage') {
+          discount = (price * coupon.discountValue) / 100;
+          if (coupon.maxDiscount > 0) discount = Math.min(discount, coupon.maxDiscount);
+        } else {
+          discount = Math.min(coupon.discountValue, price);
+        }
+        finalPrice = price - discount;
+        appliedCoupon = coupon._id.toString();
+      }
+    }
+    if (finalPrice < 0) finalPrice = 0;
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       mode: 'payment',
-      success_url: `${frontendUrl}/payment-success?session_id={CHECKOUT_SESSION_ID}&event_id=${eventId}&reg_id=${registration._id}`,
+      success_url: `${frontendUrl}/payment-success?session_id={CHECKOUT_SESSION_ID}&event_id=${eventId}`,
       cancel_url: `${frontendUrl}/events/${eventId}?payment_cancelled=true`,
       customer_email: user.email,
       metadata: {
         eventId: eventId.toString(),
         userId: userId.toString(),
-        registrationId: registration._id.toString(),
         eventTitle: event.title,
+        ...(selectedTicketType && { ticketTypeName: selectedTicketType.name }),
+        ...(appliedCoupon && { couponId: appliedCoupon }),
       },
       line_items: [
         {
@@ -107,21 +130,28 @@ export const createCheckoutSession = async (req, res) => {
             currency: 'inr',
             product_data: {
               name: event.title,
-              description: `Event ticket for ${event.title}`,
+              description: `Event ticket for ${event.title}${appliedCoupon ? ' (with discount)' : ''}`,
             },
-            unit_amount: Math.round(event.price * 100),
+            unit_amount: Math.round(Math.max(finalPrice, 0) * 100),
           },
           quantity: 1,
         },
       ],
     });
 
-    registration.paymentId = session.id;
-    await registration.save();
+    // Create a pending_payment registration so verifyPayment can find it by paymentId
+    await Registration.create({
+      user: userId,
+      event: eventId,
+      status: 'pending_payment',
+      paymentStatus: 'pending',
+      paymentId: session.id,
+      ticketTypeName: selectedTicketType?.name,
+    });
 
-    logger.info(`New Stripe checkout session created for user ${userId}, event ${event.title}, session ${session.id}`);
+    logger.info(`Stripe checkout session created for user ${userId}, event ${event.title}, session ${session.id}`);
     res.json({ sessionId: session.id, sessionUrl: session.url });
-    
+
   } catch (error) {
     logger.error('Stripe checkout error:', error);
     res.status(500).json({ message: 'Failed to create payment session', error: error.message });
@@ -137,26 +167,19 @@ export const verifyPayment = async (req, res) => {
   
   try {
     const { sessionId } = req.params;
-    const { eventId, regId } = req.query;
+    const eventId = req.query.event_id;
 
-    logger.info(`🔍 Verifying payment: sessionId=${sessionId}, eventId=${eventId}, regId=${regId}, userId=${req.user._id}`);
+    logger.info(`🔍 Verifying payment: sessionId=${sessionId}, eventId=${eventId}, userId=${req.user._id}`);
 
     // Retrieve the session from Stripe
     const session = await stripe.checkout.sessions.retrieve(sessionId);
     logger.info(`📊 Session status: ${session.payment_status}`);
 
-    // Try to find registration by ID first
-    let registration = await Registration.findById(regId);
+    // Try to find registration by paymentId, then by user+event
+    let registration = await Registration.findOne({ paymentId: sessionId });
 
-    // If not found by ID, try to find by paymentId
     if (!registration) {
-      logger.debug('Registration not found by ID, searching by paymentId...');
-      registration = await Registration.findOne({ paymentId: sessionId });
-    }
-
-    // If still not found, check if there's a registration for this user/event
-    if (!registration) {
-      logger.debug('Still not found, checking by user/event...');
+      logger.debug('Not found by paymentId, checking by user/event...');
       registration = await Registration.findOne({
         user: req.user._id,
         event: eventId
@@ -170,19 +193,13 @@ export const verifyPayment = async (req, res) => {
 
         // If it was pending, update it
         if (registration.status === 'pending_payment' || registration.status === 'cancelled') {
+          const prevStatus = registration.status;
           registration.status = 'confirmed';
           registration.paymentStatus = 'paid';
           registration.paymentId = sessionId;
           await registration.save();
-          logger.info(`Registration ${registration._id} updated from ${registration.status} to confirmed`);
-          
-          // Increment event registered count
-          const event = await Event.findById(eventId);
-          if (event) {
-            event.registeredCount += 1;
-            await event.save();
-            logger.info(`Event ${event.title} registered count updated to ${event.registeredCount}`);
-          }
+          logger.info(`Registration ${registration._id} updated from ${prevStatus} to confirmed`);
+          // Capacity was already reserved atomically during registration, so no increment needed
         }
       } else {
         // No registration found - create a new one (edge case)
@@ -197,17 +214,43 @@ export const verifyPayment = async (req, res) => {
           });
         }
 
+        // Atomically reserve a seat
+        let updatedEvent;
+        if (session.metadata?.ticketTypeName) {
+          updatedEvent = await Event.findOneAndUpdate(
+            {
+              _id: eventId,
+              'ticketTypes.name': session.metadata.ticketTypeName,
+              $expr: { $lt: [{ $arrayElemAt: ['$ticketTypes.registeredCount', { $indexOfArray: ['$ticketTypes.name', session.metadata.ticketTypeName] }] }, { $arrayElemAt: ['$ticketTypes.capacity', { $indexOfArray: ['$ticketTypes.name', session.metadata.ticketTypeName] }] }] },
+            },
+            { $inc: { 'ticketTypes.$.registeredCount': 1, registeredCount: 1 } },
+            { new: true }
+          );
+        } else {
+          updatedEvent = await Event.findOneAndUpdate(
+            { _id: eventId, $expr: { $lt: ['$registeredCount', '$capacity'] } },
+            { $inc: { registeredCount: 1 } },
+            { new: true }
+          );
+        }
+
+        if (!updatedEvent) {
+          logger.error(`Cannot create registration — event ${eventId} is full`);
+          return res.json({
+            success: false,
+            message: 'Event is full. Cannot complete registration.',
+          });
+        }
+
         registration = await Registration.create({
           user: req.user._id,
           event: eventId,
           status: 'confirmed',
           paymentStatus: 'paid',
           paymentId: sessionId,
+          ticketTypeName: session.metadata?.ticketTypeName || undefined,
         });
 
-        // Update event count
-        event.registeredCount += 1;
-        await event.save();
         logger.info(`New registration created for user ${req.user._id}, event ${event.title}`);
       }
 
@@ -237,6 +280,20 @@ export const verifyPayment = async (req, res) => {
         { path: 'user', select: 'name email' },
         { path: 'event', select: 'title startDate startTime endTime venue category price' },
       ]);
+
+      // Increment coupon usage if applied
+      if (session.metadata?.couponId) {
+        await Coupon.findByIdAndUpdate(session.metadata.couponId, { $inc: { currentUses: 1 } });
+      }
+
+      createNotification({
+        user: req.user._id,
+        type: 'payment_received',
+        title: 'Payment Received',
+        message: `Your payment for "${registration.event.title}" was successful!`,
+        event: eventId,
+        link: `/events/${eventId}`,
+      });
 
       // Send confirmation email
       try {
@@ -313,46 +370,93 @@ export const handleStripeWebhook = async (req, res) => {
           registration.paymentStatus = 'paid';
           await registration.save();
           logger.info(`✅ Registration ${registration._id} confirmed via webhook`);
-          
-          // Update event count
-          const event = await Event.findById(registration.event);
-          if (event) {
-            event.registeredCount += 1;
-            await event.save();
-            logger.info(`📊 Event ${event.title} registered count: ${event.registeredCount}`);
-          }
+          // Capacity was already reserved atomically during registration, so no increment needed
           
           // Generate QR code
           const user = await User.findById(registration.user);
+          const eventDoc = await Event.findById(registration.event);
           if (user) {
             const qrData = {
               ticketType: 'event',
               attendeeName: user.name,
               userId: registration.user,
               eventId: registration.event,
-              eventTitle: event?.title || 'Event',
+              eventTitle: eventDoc?.title || 'Event',
               registrationId: registration._id,
             };
             const qrCode = await generateQRCode(qrData);
             registration.qrCode = qrCode;
             await registration.save();
             
-            // Send confirmation email
-            if (event) {
+            if (session.metadata?.couponId) {
+              await Coupon.findByIdAndUpdate(session.metadata.couponId, { $inc: { currentUses: 1 } });
+            }
+
+            createNotification({
+              user: registration.user,
+              type: 'payment_received',
+              title: 'Payment Received',
+              message: `Your payment for "${eventDoc?.title || 'Event'}" was successful!`,
+              event: registration.event,
+              link: `/events/${registration.event}`,
+            });
+
+            if (eventDoc) {
               await sendRegistrationConfirmation({
                 to: user.email,
                 userName: user.name,
-                event: event,
+                event: eventDoc,
                 ticketNumber: registration.ticketNumber,
                 qrCode: qrCode,
               });
-              logger.info(`📧 Confirmation email sent to ${user.email}`);
+              logger.info(`Confirmation email sent to ${user.email}`);
             }
           }
         } else if (registration) {
           logger.warn(`⚠️ Registration ${registration?._id} already has status: ${registration?.status}`);
         } else {
-          logger.warn(`⚠️ No registration found for session: ${session.id}`);
+          logger.warn(`⚠️ No registration found for session ${session.id}, creating new...`);
+          const { eventId, userId } = session.metadata || {};
+          if (eventId && userId) {
+            const event = await Event.findById(eventId);
+            const user = await User.findById(userId);
+            if (event && user) {
+              // Atomically reserve a seat
+              let updatedEvent;
+              if (session.metadata?.ticketTypeName) {
+                updatedEvent = await Event.findOneAndUpdate(
+                  {
+                    _id: eventId,
+                    'ticketTypes.name': session.metadata.ticketTypeName,
+                    $expr: { $lt: [{ $arrayElemAt: ['$ticketTypes.registeredCount', { $indexOfArray: ['$ticketTypes.name', session.metadata.ticketTypeName] }] }, { $arrayElemAt: ['$ticketTypes.capacity', { $indexOfArray: ['$ticketTypes.name', session.metadata.ticketTypeName] }] }] },
+                  },
+                  { $inc: { 'ticketTypes.$.registeredCount': 1, registeredCount: 1 } },
+                  { new: true }
+                );
+              } else {
+                updatedEvent = await Event.findOneAndUpdate(
+                  { _id: eventId, $expr: { $lt: ['$registeredCount', '$capacity'] } },
+                  { $inc: { registeredCount: 1 } },
+                  { new: true }
+                );
+              }
+
+              if (!updatedEvent) {
+                logger.error(`Webhook: Event ${eventId} is full, cannot create registration`);
+                break;
+              }
+
+              const newRegistration = await Registration.create({
+                user: userId,
+                event: eventId,
+                status: 'confirmed',
+                paymentStatus: 'paid',
+                paymentId: session.id,
+                ticketTypeName: session.metadata?.ticketTypeName || undefined,
+              });
+              logger.info(`✅ New registration ${newRegistration._id} created via webhook for session ${session.id}`);
+            }
+          }
         }
       } catch (error) {
         logger.error(`❌ Error processing webhook event: ${error.message}`);

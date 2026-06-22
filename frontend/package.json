@@ -9,7 +9,6 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.4",
-    "@stripe/stripe-js": "^9.7.0",
     "axios": "^1.6.5",
     "date-fns": "^3.2.0",
     "lucide-react": "^0.312.0",

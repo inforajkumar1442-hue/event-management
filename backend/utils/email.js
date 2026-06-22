@@ -1,13 +1,25 @@
 import nodemailer from 'nodemailer';
+import dotenv from 'dotenv';
+dotenv.config();
+import logger from '../utils/logger.js';
 
 const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST,
   port: parseInt(process.env.EMAIL_PORT) || 587,
   secure: false,
+  requireTLS: true,
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
+});
+
+transporter.verify((err) => {
+  if (err) {
+    logger.error('Email transporter verification failed: ' + err.message);
+  } else {
+    logger.info('Email transporter is ready');
+  }
 });
 
 const emailStyles = `
@@ -332,6 +344,41 @@ export const sendCancellationEmail = async ({ to, userName, event }) => {
     from: `"EventGather" <${process.env.EMAIL_USER}>`,
     to,
     subject: `Registration Cancelled: ${event.title}`,
+    html,
+  });
+};
+
+export const sendVerificationEmail = async ({ to, userName, verificationUrl }) => {
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head><meta charset="UTF-8"><title>Verify Email - EventGather</title></head>
+    <body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f4f4f4;margin:0;padding:0">
+      <div style="max-width:480px;margin:40px auto;background:white;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.1)">
+        <div style="background:linear-gradient(135deg,#6366f1,#8b5cf6);padding:40px;text-align:center;color:white">
+          <h1 style="margin:0;font-size:24px">Verify Your Email</h1>
+        </div>
+        <div style="padding:40px;color:#333">
+          <p style="font-size:16px">Hi <strong>${userName}</strong>,</p>
+          <p>Thanks for creating an account! Please verify your email address by clicking the button below:</p>
+          <div style="text-align:center;margin:30px 0">
+            <a href="${verificationUrl}" style="display:inline-block;background:#6366f1;color:white;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:600;font-size:16px">Verify Email</a>
+          </div>
+          <p style="color:#888;font-size:14px">This link expires in 24 hours.</p>
+          <p style="color:#888;font-size:14px">If you didn't create this account, you can safely ignore this email.</p>
+        </div>
+        <div style="background:#f8f8f8;padding:24px;text-align:center;font-size:13px;color:#888">
+          <p>EventGather — Connecting people through experiences</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  return transporter.sendMail({
+    from: `"EventGather" <${process.env.EMAIL_USER}>`,
+    to,
+    subject: 'Verify your email - EventGather',
     html,
   });
 };

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Search, X } from 'lucide-react';
 import EventCard from '../components/EventCard';
 import api from '../api/axios';
@@ -11,11 +11,13 @@ export default function Events() {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [category, setCategory] = useState('All');
   const [status, setStatus] = useState('upcoming');
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({});
   const [hoveredEvent, setHoveredEvent] = useState(null);
+  const debounceTimer = useRef(null);
 
   // Fetch events function - wrapped in useCallback
   const fetchEvents = useCallback(async (search, cat, stat, pageNum) => {
@@ -52,23 +54,40 @@ export default function Events() {
     }
   }, []);
 
-  // Fetch when any filter changes
+  // Fetch when any filter changes (debounced for search)
   useEffect(() => {
-    fetchEvents(searchTerm, category, status, 1);
+    fetchEvents(debouncedSearch, category, status, 1);
     setPage(1);
-  }, [searchTerm, category, status, fetchEvents]);
+  }, [debouncedSearch, category, status, fetchEvents]);
 
   // Fetch when page changes (but not when filters change)
   useEffect(() => {
     if (page > 1) {
-      fetchEvents(searchTerm, category, status, page);
+      fetchEvents(debouncedSearch, category, status, page);
     }
-  }, [page]);
+  }, [page, debouncedSearch, category, status, fetchEvents]);
+
+  // Re-fetch when tab gains focus (e.g. user returns from register/cancel)
+  useEffect(() => {
+    const onFocus = () => fetchEvents(debouncedSearch, category, status, page);
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [debouncedSearch, category, status, page, fetchEvents]);
 
   const handleSearch = (e) => {
     const value = e.target.value;
     setSearchTerm(value);
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    debounceTimer.current = setTimeout(() => {
+      setDebouncedSearch(value);
+    }, 400);
   };
+
+  useEffect(() => {
+    return () => {
+      if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    };
+  }, []);
 
   const handleCategoryChange = (newCategory) => {
     setCategory(newCategory);
@@ -80,6 +99,7 @@ export default function Events() {
 
   const resetFilters = () => {
     setSearchTerm('');
+    setDebouncedSearch('');
     setCategory('All');
     setStatus('upcoming');
     setPage(1);
@@ -89,18 +109,18 @@ export default function Events() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="font-display font-bold text-3xl text-slate-900 mb-2">
+        <h1 className="font-display font-bold text-3xl text-slate-900 dark:text-slate-100 mb-2">
           {searchTerm ? `Search: "${searchTerm}"` : 
            status === 'upcoming' ? 'Upcoming Events' : 
            status === 'ongoing' ? 'Ongoing Events' : 'Events'}
         </h1>
-        <p className="text-slate-500">Discover and register for events happening around you</p>
+        <p className="text-slate-500 dark:text-slate-400">Discover and register for events happening around you</p>
       </div>
 
       {/* Search Bar */}
       <div className="mb-6">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
           <input
             type="text"
             value={searchTerm}
@@ -111,7 +131,7 @@ export default function Events() {
           {searchTerm && (
             <button 
               onClick={() => setSearchTerm('')} 
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"
             >
               <X className="w-4 h-4" />
             </button>
@@ -121,14 +141,14 @@ export default function Events() {
 
       {/* Category Filters */}
       <div className="mb-6">
-        <label className="block text-sm font-medium text-slate-700 mb-2">Category</label>
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Category</label>
         <div className="flex flex-wrap gap-2">
           {categories.map(c => (
             <button
               key={c}
               onClick={() => handleCategoryChange(c)}
               className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
-                category === c ? 'bg-primary-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                category === c ? 'bg-primary-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
               }`}
             >
               {c}
@@ -139,14 +159,14 @@ export default function Events() {
 
       {/* Status Filters */}
       <div className="mb-6">
-        <label className="block text-sm font-medium text-slate-700 mb-2">Status</label>
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Status</label>
         <div className="flex flex-wrap gap-2">
           {statuses.map(s => (
             <button
               key={s}
               onClick={() => handleStatusChange(s)}
               className={`px-3 py-1 rounded-full text-sm font-medium transition-colors capitalize ${
-                status === s ? 'bg-primary-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                status === s ? 'bg-primary-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
               }`}
             >
               {s === 'All' ? 'All Events' : s}
@@ -164,7 +184,7 @@ export default function Events() {
 
       {/* Results count */}
       {!loading && events.length > 0 && (
-        <p className="text-sm text-slate-500 mb-4">
+        <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
           Found {pagination.total} event{pagination.total !== 1 ? 's' : ''}
           {searchTerm && ` matching "${searchTerm}"`}
         </p>
@@ -175,11 +195,11 @@ export default function Events() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {Array(8).fill(0).map((_, i) => (
             <div key={i} className="card animate-pulse">
-              <div className="h-44 bg-slate-200" />
+              <div className="h-44 bg-slate-200 dark:bg-slate-700" />
               <div className="p-5 space-y-3">
-                <div className="h-4 bg-slate-200 rounded w-3/4" />
-                <div className="h-3 bg-slate-200 rounded w-full" />
-                <div className="h-3 bg-slate-200 rounded w-2/3" />
+                <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-3/4" />
+                <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-full" />
+                <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-2/3" />
               </div>
             </div>
           ))}
@@ -189,11 +209,11 @@ export default function Events() {
       {/* No Results State */}
       {!loading && events.length === 0 && (
         <div className="text-center py-20">
-          <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Search className="w-7 h-7 text-slate-400" />
+          <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Search className="w-7 h-7 text-slate-400 dark:text-slate-500" />
           </div>
-          <h3 className="font-display font-bold text-xl text-slate-700 mb-2">No events found</h3>
-          <p className="text-slate-500">
+          <h3 className="font-display font-bold text-xl text-slate-700 dark:text-slate-300 mb-2">No events found</h3>
+          <p className="text-slate-500 dark:text-slate-400">
             {searchTerm 
               ? `No events matching "${searchTerm}"`
               : 'No events available at the moment'}
@@ -235,7 +255,7 @@ export default function Events() {
           >
             Previous
           </button>
-          <span className="px-4 py-2 text-sm text-slate-600">
+          <span className="px-4 py-2 text-sm text-slate-600 dark:text-slate-300">
             Page {page} of {pagination.pages}
           </span>
           <button 

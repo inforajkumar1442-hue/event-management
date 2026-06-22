@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   Users, Calendar, CheckSquare, TrendingUp,
   Plus, Edit2, Trash2, Download, Mail, Eye,
-  ToggleLeft, ToggleRight, X, Search, UserPlus
+  ToggleLeft, ToggleRight, X, Search, UserPlus, Tag, Bell, Loader2, AlertTriangle
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -59,6 +59,17 @@ export default function AdminDashboard() {
     department: '',
     phone: ''
   });
+  const [confirmModal, setConfirmModal] = useState(null);
+  const [coupons, setCoupons] = useState([]);
+  const [showCouponForm, setShowCouponForm] = useState(false);
+  const [couponFormData, setCouponFormData] = useState({
+    code: '',
+    discountType: 'percentage',
+    discountValue: '',
+    maxUses: '',
+    expiryDate: ''
+  });
+  const [sendingReminders, setSendingReminders] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -67,7 +78,8 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (activeTab === 'users') fetchUsers();
     if (activeTab === 'staff') fetchStaff();
-  }, [activeTab, userSearch]);
+    if (activeTab === 'coupons') fetchCoupons();
+  }, [activeTab]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -114,15 +126,8 @@ export default function AdminDashboard() {
     }
   };
 
-  const deleteStaff = async (id) => {
-    if (!confirm('Delete this staff member?')) return;
-    try {
-      await api.delete(`/admin/users/staff/${id}`);
-      toast.success('Staff member deleted');
-      fetchStaff();
-    } catch (err) {
-      toast.error('Failed to delete staff');
-    }
+  const deleteStaff = (id) => {
+    setConfirmModal({ type: "staff", id, title: "Are you sure to delete this staff member?" });
   };
   const toggleStaffStatus = async (id) => {
     try {
@@ -135,14 +140,7 @@ export default function AdminDashboard() {
   };
 
   const deleteEvent = async (id) => {
-    if (!confirm('Delete this event and all its registrations?')) return;
-    try {
-      await api.delete(`/events/${id}`);
-      toast.success('Event deleted');
-      fetchData();
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed');
-    }
+    setConfirmModal({ type: 'event', id, title: 'Delete this event and all its registrations?' });
   };
 
   const toggleUser = async (id) => {
@@ -156,13 +154,29 @@ export default function AdminDashboard() {
   };
 
   const deleteUser = async (id) => {
-    if (!confirm('Delete this user and all their registrations?')) return;
+    setConfirmModal({ type: 'user', id, title: 'Delete this user and all their registrations?' });
+  };
+
+  const handleConfirm = async () => {
+    if (!confirmModal) return;
     try {
-      await api.delete(`/admin/users/${id}`);
-      toast.success('User deleted');
-      fetchUsers();
+      if (confirmModal.type === 'event') {
+        await api.delete(`/events/${confirmModal.id}`);
+        toast.success('Event deleted');
+        fetchData();
+      } else if (confirmModal.type === 'user') {
+        await api.delete(`/admin/users/${confirmModal.id}`);
+        toast.success('User deleted');
+        fetchUsers();
+      } else if (confirmModal.type == "staff") {
+        await api.delete(`/admin/users/staff/${confirmModal.id}`);
+        toast.success('Staff member deleted');
+        fetchStaff();
+      }
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed');
+    } finally {
+      setConfirmModal(null);
     }
   };
 
@@ -184,6 +198,59 @@ export default function AdminDashboard() {
     }
   };
 
+  const sendReminders = async () => {
+    setSendingReminders(true);
+    try {
+      const { data } = await api.post('/admin/trigger-reminders');
+      toast.success(`${data.count} notifications sent!`);
+    } catch {
+      toast.error('Failed to send reminders');
+    } finally {
+      setSendingReminders(false);
+    }
+  };
+
+  const fetchCoupons = async () => {
+    try {
+      const { data } = await api.get('/coupons');
+      setCoupons(data.coupons || data);
+    } catch { /* silent */ }
+  };
+
+  const createCoupon = async (e) => {
+    e.preventDefault();
+    try {
+      await api.post('/coupons', { ...couponFormData, discountValue: Number(couponFormData.discountValue), maxUses: couponFormData.maxUses ? Number(couponFormData.maxUses) : undefined });
+      toast.success('Coupon created successfully');
+      setShowCouponForm(false);
+      setCouponFormData({ code: '', discountType: 'percentage', discountValue: '', maxUses: '', expiryDate: '' });
+      fetchCoupons();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to create coupon');
+    }
+  };
+
+  const toggleCouponStatus = async (id) => {
+    try {
+      const { data } = await api.patch(`/coupons/${id}`);
+      toast.success(data.message || 'Coupon status updated');
+      fetchCoupons();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to update coupon');
+    }
+  };
+
+  const deleteCoupon = async (id) => {
+    if (!confirm('Delete this coupon?')) return;
+    try {
+      await api.delete(`/coupons/${id}`);
+      toast.success('Coupon deleted');
+      fetchCoupons();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to delete coupon');
+    }
+  };
+
   if (loading) return (
     <div className="flex items-center justify-center h-64">
       <div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
@@ -197,7 +264,7 @@ export default function AdminDashboard() {
     { label: 'Upcoming Events', value: stats?.stats.upcomingEvents, icon: TrendingUp, color: 'bg-amber-50 text-amber-600' },
   ];
 
-  const tabs = ['overview', 'events', 'users', 'staff', 'registrations'];
+  const tabs = ['overview', 'events', 'users', 'staff', 'coupons', 'registrations'];
 
   /** Safe date formatter — returns '—' instead of throwing on bad input. */
   const safeFormat = (dateVal, fmt) => {
@@ -214,8 +281,8 @@ export default function AdminDashboard() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="font-display font-bold text-3xl text-slate-900">Admin Dashboard</h1>
-          <p className="text-slate-500 mt-1">Manage your events and users</p>
+          <h1 className="font-display font-bold text-3xl text-slate-900 dark:text-slate-100">Admin Dashboard</h1>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">Manage your events and users</p>
         </div>
         <button
           onClick={() => { setEditingEvent(null); setShowEventForm(true); }}
@@ -230,7 +297,7 @@ export default function AdminDashboard() {
         {statCards.map(s => (
           <div key={s.label} className="card p-5">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-sm text-slate-500 font-medium">{s.label}</span>
+              <span className="text-sm text-slate-500 dark:text-slate-400 font-medium">{s.label}</span>
               <div className={`p-2 rounded-xl ${s.color.split(' ')[0]}`}>
                 <s.icon className={`w-4 h-4 ${s.color.split(' ')[1]}`} />
               </div>
@@ -241,12 +308,12 @@ export default function AdminDashboard() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-slate-100 rounded-xl p-1 mb-6 w-fit overflow-x-auto">
+      <div className="flex gap-1 bg-slate-100 dark:bg-slate-800 rounded-xl p-1 mb-6 w-fit overflow-x-auto">
         {tabs.map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all capitalize whitespace-nowrap ${activeTab === tab ? 'bg-white shadow text-slate-900' : 'text-slate-500 hover:text-slate-700'
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all capitalize whitespace-nowrap ${activeTab === tab ? 'bg-white dark:bg-slate-700 shadow text-slate-900 dark:text-slate-100' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
               }`}
           >
             {tab}
@@ -257,18 +324,36 @@ export default function AdminDashboard() {
       {/* ── Overview Tab ── */}
       {activeTab === 'overview' && (
         <div className="space-y-6 animate-fade-in">
+          {/* Send Reminders Button */}
+          <div className="flex justify-end">
+            <button
+              onClick={sendReminders}
+              disabled={sendingReminders}
+              className="btn-secondary text-sm py-2 px-4 flex items-center gap-2"
+            >
+              {sendingReminders ? <Loader2 className="w-4 h-4 animate-spin" /> : <Bell className="w-4 h-4" />}
+              {sendingReminders ? 'Sending...' : 'Send Event Reminders'}
+            </button>
+          </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Monthly Registrations */}
             <div className="card p-6">
               <h2 className="font-display font-bold text-lg mb-4">Monthly Registrations</h2>
-              <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={stats?.monthlyRegistrations?.map(d => ({ month: d._id, count: d.count })) || []}>
-                  <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                  <YAxis tick={{ fontSize: 12 }} />
-                  <Tooltip />
-                  <Bar dataKey="count" fill="#6366f1" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              {stats?.monthlyRegistrations?.length > 0 ? (
+                <ResponsiveContainer width="100%" height={220}>
+                  <BarChart data={stats.monthlyRegistrations.map(d => ({ month: d._id, count: d.count }))}>
+                    <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+                    <YAxis tick={{ fontSize: 12 }} />
+                    <Tooltip />
+                    <Bar dataKey="count" fill="#6366f1" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-[220px] text-slate-400 dark:text-slate-500">
+                  <Calendar className="w-12 h-12 mb-3 text-slate-300 dark:text-slate-600" />
+                  <p className="text-sm font-medium">No registration data yet</p>
+                </div>
+              )}
             </div>
 
             {/* Events by Category */}
@@ -281,8 +366,8 @@ export default function AdminDashboard() {
                     cx="50%" cy="50%" outerRadius={80} dataKey="value"
                     label={({ name, value }) => `${name}: ${value}`}
                   >
-                    {stats?.eventsByCategory?.map((_, i) => (
-                      <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                    {stats?.eventsByCategory?.map((d, i) => (
+                      <Cell key={d._id || i} fill={COLORS[i % COLORS.length]} />
                     ))}
                   </Pie>
                   <Tooltip />
@@ -297,18 +382,18 @@ export default function AdminDashboard() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-slate-100">
+                  <tr className="border-b border-slate-100 dark:border-slate-700">
                     {['User', 'Event', 'Date', 'Status'].map(h => (
-                      <th key={h} className="text-left py-2 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">{h}</th>
+                      <th key={h} className="text-left py-2 px-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {stats?.recentRegistrations?.map(reg => (
-                    <tr key={reg._id} className="border-b border-slate-50 hover:bg-slate-50">
+                    <tr key={reg._id} className="border-b border-slate-50 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700">
                       <td className="py-3 px-3 font-medium">{reg.user?.name}</td>
-                      <td className="py-3 px-3 text-slate-600">{reg.event?.title}</td>
-                      <td className="py-3 px-3 text-slate-500">
+                      <td className="py-3 px-3 text-slate-600 dark:text-slate-300">{reg.event?.title}</td>
+                      <td className="py-3 px-3 text-slate-500 dark:text-slate-400">
                         {safeFormat(reg.event?.startDate || reg.event?.date, 'MMM d')}
                       </td>
                       <td className="py-3 px-3">
@@ -318,6 +403,13 @@ export default function AdminDashboard() {
                       </td>
                     </tr>
                   ))}
+                  {(!stats?.recentRegistrations || stats.recentRegistrations.length === 0) && (
+                    <tr>
+                      <td colSpan="4" className="text-center py-8 text-slate-500 dark:text-slate-400">
+                        There are no registrations right now
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -330,51 +422,58 @@ export default function AdminDashboard() {
         <div className="animate-fade-in">
           <div className="card overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-slate-50 border-b border-slate-100">
+              <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700">
                 <tr>
                   {['Event', 'Category', 'Date', 'Capacity', 'Status', 'Actions'].map(h => (
-                    <th key={h} className="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wide">{h}</th>
+                    <th key={h} className="text-left py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">{h}</th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50">
+              <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
                 {events.map(event => (
-                  <tr key={event._id} className="hover:bg-slate-50">
+                  <tr key={event._id} className="hover:bg-slate-50 dark:hover:bg-slate-700">
                     <td className="py-3 px-4">
-                      <Link to={`/events/${event._id}`} className="font-medium text-slate-900 hover:text-primary-600 line-clamp-1">
+                      <Link to={`/events/${event._id}`} className="font-medium text-slate-900 dark:text-slate-100 hover:text-primary-600 line-clamp-1">
                         {event.title}
                       </Link>
                     </td>
                     <td className="py-3 px-4">
-                      <span className="badge bg-primary-50 text-primary-700 text-xs">{event.category}</span>
+                      <span className="badge bg-primary-50 dark:bg-primary-900 text-primary-700 dark:text-primary-300 text-xs">{event.category}</span>
                     </td>
-                    <td className="py-3 px-4 text-slate-500">
+                    <td className="py-3 px-4 text-slate-500 dark:text-slate-400">
                       {safeFormat(event.startDate, 'MMM d, yyyy')}
                     </td>
-                    <td className="py-3 px-4 text-slate-600">{event.registeredCount}/{event.capacity}</td>
+                    <td className="py-3 px-4 text-slate-600 dark:text-slate-300">
+                      {(() => {
+                        const hasTt = event.ticketTypes?.length > 0;
+                        const reg = hasTt ? event.ticketTypes.reduce((s, t) => s + (t.registeredCount || 0), 0) : (event.registeredCount || 0);
+                        const cap = hasTt ? event.ticketTypes.reduce((s, t) => s + t.capacity, 0) : (event.capacity || 0);
+                        return `${reg}/${cap}`;
+                      })()}
+                    </td>
                     <td className="py-3 px-4">
                       <span className={`badge text-xs ${event.status === 'upcoming' ? 'bg-emerald-100 text-emerald-700' :
-                        event.status === 'cancelled' ? 'bg-red-100 text-red-700' :
-                          'bg-slate-100 text-slate-700'
+                        event.status === 'cancelled' ? 'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300' :
+                          'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
                         }`}>
                         {event.status}
                       </span>
                     </td>
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-1">
-                        <button onClick={() => viewRegistrations(event._id)} title="View Registrations" className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                        <button onClick={() => viewRegistrations(event._id)} title="View Registrations" className="p-1.5 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors">
                           <Eye className="w-4 h-4" />
                         </button>
-                        <button onClick={() => sendReminder(event._id)} title="Send Reminder" className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors">
+                        <button onClick={() => sendReminder(event._id)} title="Send Reminder" className="p-1.5 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/30 rounded-lg transition-colors">
                           <Mail className="w-4 h-4" />
                         </button>
-                        <button onClick={() => downloadCSV(event._id, event.title)} title="Export CSV" className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors">
+                        <button onClick={() => downloadCSV(event._id, event.title)} title="Export CSV" className="p-1.5 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-colors">
                           <Download className="w-4 h-4" />
                         </button>
-                        <button onClick={() => { setEditingEvent(event); setShowEventForm(true); }} title="Edit" className="p-1.5 text-primary-600 hover:bg-primary-50 rounded-lg transition-colors">
+                        <button onClick={() => { setEditingEvent(event); setShowEventForm(true); }} title="Edit" className="p-1.5 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-lg transition-colors">
                           <Edit2 className="w-4 h-4" />
                         </button>
-                        <button onClick={() => deleteEvent(event._id)} title="Delete" className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                        <button onClick={() => deleteEvent(event._id)} title="Delete" className="p-1.5 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors">
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
@@ -392,7 +491,7 @@ export default function AdminDashboard() {
         <div className="animate-fade-in">
           <div className="mb-4">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
               <input
                 value={userSearch}
                 onChange={e => setUserSearch(e.target.value)}
@@ -403,48 +502,48 @@ export default function AdminDashboard() {
           </div>
           <div className="card overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-slate-50 border-b border-slate-100">
+              <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700">
                 <tr>
                   {['User', 'Email', 'Department', 'Role', 'Status', 'Joined', 'Actions'].map(h => (
-                    <th key={h} className="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wide">{h}</th>
+                    <th key={h} className="text-left py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">{h}</th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50">
+              <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
                 {users.map(u => (
-                  <tr key={u._id} className="hover:bg-slate-50">
+                  <tr key={u._id} className="hover:bg-slate-50 dark:hover:bg-slate-700">
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 bg-primary-100 rounded-full flex items-center justify-center text-primary-700 text-xs font-bold">
+                        <div className="w-7 h-7 bg-primary-100 dark:bg-primary-900 rounded-full flex items-center justify-center text-primary-700 dark:text-primary-300 text-xs font-bold">
                           {u.name?.[0]?.toUpperCase()}
                         </div>
                         <span className="font-medium">{u.name}</span>
                       </div>
                     </td>
-                    <td className="py-3 px-4 text-slate-500">{u.email}</td>
-                    <td className="py-3 px-4 text-slate-500">{u.department || '—'}</td>
+                    <td className="py-3 px-4 text-slate-500 dark:text-slate-400">{u.email}</td>
+                    <td className="py-3 px-4 text-slate-500 dark:text-slate-400">{u.department || '—'}</td>
                     <td className="py-3 px-4">
-                      <span className={`badge text-xs ${u.role === 'admin' ? 'bg-primary-100 text-primary-700' : u.role === 'staff' ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-700'}`}>
+                      <span className={`badge text-xs ${u.role === 'admin' ? 'bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300' : u.role === 'staff' ? 'bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300' : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300'}`}>
                         {u.role}
                       </span>
                     </td>
                     <td className="py-3 px-4">
-                      <span className={`badge text-xs ${u.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                      <span className={`badge text-xs ${u.isActive ? 'bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300' : 'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300'}`}>
                         {u.isActive ? 'Active' : 'Inactive'}
                       </span>
                     </td>
-                    <td className="py-3 px-4 text-slate-500">{safeFormat(u.createdAt, 'MMM d, yyyy')}</td>
+                    <td className="py-3 px-4 text-slate-500 dark:text-slate-400">{safeFormat(u.createdAt, 'MMM d, yyyy')}</td>
                     <td className="py-3 px-4">
                       {u.role !== 'admin' && (
                         <div className="flex items-center gap-1">
                           <button
                             onClick={() => toggleUser(u._id)}
                             title={u.isActive ? 'Deactivate' : 'Activate'}
-                            className={`p-1.5 rounded-lg transition-colors ${u.isActive ? 'text-amber-600 hover:bg-amber-50' : 'text-emerald-600 hover:bg-emerald-50'}`}
+                            className={`p-1.5 rounded-lg transition-colors ${u.isActive ? 'text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/30' : 'text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30'}`}
                           >
                             {u.isActive ? <ToggleRight className="w-4 h-4" /> : <ToggleLeft className="w-4 h-4" />}
                           </button>
-                          <button onClick={() => deleteUser(u._id)} className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                          <button onClick={() => deleteUser(u._id)} className="p-1.5 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors">
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
@@ -472,26 +571,26 @@ export default function AdminDashboard() {
           </div>
           <div className="card overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-slate-50 border-b border-slate-100">
+              <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700">
                 <tr>
                   {['Name', 'Email', 'Department', 'Phone', 'Status', 'Joined', 'Actions'].map(h => (
-                    <th key={h} className="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wide">{h}</th>
+                    <th key={h} className="text-left py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">{h}</th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50">
+              <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
                 {staff.map(s => (
-                  <tr key={s._id} className="hover:bg-slate-50">
+                  <tr key={s._id} className="hover:bg-slate-50 dark:hover:bg-slate-700">
                     <td className="py-3 px-4 font-medium">{s.name}</td>
-                    <td className="py-3 px-4 text-slate-500">{s.email}</td>
-                    <td className="py-3 px-4 text-slate-500">{s.department || '—'}</td>
-                    <td className="py-3 px-4 text-slate-500">{s.phone || '—'}</td>
+                    <td className="py-3 px-4 text-slate-500 dark:text-slate-400">{s.email}</td>
+                    <td className="py-3 px-4 text-slate-500 dark:text-slate-400">{s.department || '—'}</td>
+                    <td className="py-3 px-4 text-slate-500 dark:text-slate-400">{s.phone || '—'}</td>
                     <td className="py-3 px-4">
-                      <span className={`badge text-xs ${s.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                      <span className={`badge text-xs ${s.isActive ? 'bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300' : 'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300'}`}>
                         {s.isActive ? 'Active' : 'Inactive'}
                       </span>
                     </td>
-                    <td className="py-3 px-4 text-slate-500">{safeFormat(s.createdAt, 'MMM d, yyyy')}</td>
+                    <td className="py-3 px-4 text-slate-500 dark:text-slate-400">{safeFormat(s.createdAt, 'MMM d, yyyy')}</td>
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-1">
                         {/* Toggle Active/Inactive Button */}
@@ -499,8 +598,8 @@ export default function AdminDashboard() {
                           onClick={() => toggleStaffStatus(s._id)}
                           title={s.isActive ? 'Deactivate' : 'Activate'}
                           className={`p-1.5 rounded-lg transition-colors ${s.isActive
-                            ? 'text-amber-600 hover:bg-amber-50'
-                            : 'text-emerald-600 hover:bg-emerald-50'
+                            ? 'text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/30'
+                            : 'text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30'
                             }`}
                         >
                           {s.isActive ? <ToggleRight className="w-4 h-4" /> : <ToggleLeft className="w-4 h-4" />}
@@ -508,7 +607,7 @@ export default function AdminDashboard() {
                         {/* Delete Button */}
                         <button
                           onClick={() => deleteStaff(s._id)}
-                          className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                          className="p-1.5 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -518,8 +617,79 @@ export default function AdminDashboard() {
                 ))}
                 {staff.length === 0 && (
                   <tr>
-                    <td colSpan="7" className="text-center py-8 text-slate-500">
+                    <td colSpan="7" className="text-center py-8 text-slate-500 dark:text-slate-400">
                       No staff members found
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ── Coupons Tab ── */}
+      {activeTab === 'coupons' && (
+        <div className="animate-fade-in">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="font-display font-bold text-xl dark:text-slate-100">Coupons</h2>
+            <button
+              onClick={() => setShowCouponForm(true)}
+              className="btn-primary flex items-center gap-2 text-sm"
+            >
+              <Tag className="w-4 h-4" /> Create Coupon
+            </button>
+          </div>
+          <div className="card overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700">
+                <tr>
+                  {['Code', 'Discount', 'Event', 'Used', 'Expires', 'Status', 'Actions'].map(h => (
+                    <th key={h} className="text-left py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
+                {coupons.map(c => (
+                  <tr key={c._id} className="hover:bg-slate-50 dark:hover:bg-slate-700">
+                    <td className="py-3 px-4 font-mono text-xs font-medium text-slate-900 dark:text-slate-100">{c.code}</td>
+                    <td className="py-3 px-4 text-slate-600 dark:text-slate-300">
+                      {c.discountType === 'percentage' ? `${c.discountValue}%` : `₹${c.discountValue}`}
+                    </td>
+                    <td className="py-3 px-4 text-slate-500 dark:text-slate-400">{c.event?.title || 'All'}</td>
+                    <td className="py-3 px-4 text-slate-500 dark:text-slate-400">{c.usedCount ?? 0}{c.maxUses ? `/${c.maxUses}` : ''}</td>
+                    <td className="py-3 px-4 text-slate-500 dark:text-slate-400">{safeFormat(c.expiryDate, 'MMM d, yyyy')}</td>
+                    <td className="py-3 px-4">
+                      <span className={`badge text-xs ${c.isActive ? 'bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300' : 'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300'}`}>
+                        {c.isActive ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => toggleCouponStatus(c._id)}
+                          title={c.isActive ? 'Deactivate' : 'Activate'}
+                          className={`p-1.5 rounded-lg transition-colors ${c.isActive
+                            ? 'text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/30'
+                            : 'text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30'
+                            }`}
+                        >
+                          {c.isActive ? <ToggleRight className="w-4 h-4" /> : <ToggleLeft className="w-4 h-4" />}
+                        </button>
+                        <button
+                          onClick={() => deleteCoupon(c._id)}
+                          className="p-1.5 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {coupons.length === 0 && (
+                  <tr>
+                    <td colSpan="7" className="text-center py-8 text-slate-500 dark:text-slate-400">
+                      No coupons found
                     </td>
                   </tr>
                 )}
@@ -550,35 +720,35 @@ export default function AdminDashboard() {
               </div>
               <div className="card overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="bg-slate-50 border-b border-slate-100">
+                  <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700">
                     <tr>
                       {['Ticket', 'Name', 'Email', 'Department', 'Status', 'Checked In'].map(h => (
-                        <th key={h} className="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wide">{h}</th>
+                        <th key={h} className="text-left py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">{h}</th>
                       ))}
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-50">
+                  <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
                     {eventRegistrations.map(reg => (
-                      <tr key={reg._id} className="hover:bg-slate-50">
+                      <tr key={reg._id} className="hover:bg-slate-50 dark:hover:bg-slate-700">
                         <td className="py-3 px-4 font-mono text-xs">{reg.ticketNumber}</td>
                         <td className="py-3 px-4 font-medium">{reg.user?.name}</td>
-                        <td className="py-3 px-4 text-slate-500">{reg.user?.email}</td>
-                        <td className="py-3 px-4 text-slate-500">{reg.user?.department || '—'}</td>
+                        <td className="py-3 px-4 text-slate-500 dark:text-slate-400">{reg.user?.email}</td>
+                        <td className="py-3 px-4 text-slate-500 dark:text-slate-400">{reg.user?.department || '—'}</td>
                         <td className="py-3 px-4">
-                          <span className={`badge text-xs ${reg.status === 'confirmed' ? 'bg-emerald-100 text-emerald-700' :
-                            reg.status === 'attended' ? 'bg-blue-100 text-blue-700' :
-                              'bg-slate-100 text-slate-600'
+                          <span className={`badge text-xs ${reg.status === 'confirmed' ? 'bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300' :
+                            reg.status === 'attended' ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300' :
+                              'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
                             }`}>
                             {reg.status}
                           </span>
                         </td>
                         <td className="py-3 px-4">
                           {reg.checkedIn ? (
-                            <span className="text-emerald-600 text-xs">
+                            <span className="text-emerald-600 dark:text-emerald-400 text-xs">
                               ✓ {reg.checkedInAt ? safeFormat(reg.checkedInAt, 'HH:mm') : ''}
                             </span>
                           ) : (
-                            <span className="text-slate-400 text-xs">No</span>
+                            <span className="text-slate-400 dark:text-slate-500 text-xs">No</span>
                           )}
                         </td>
                       </tr>
@@ -589,7 +759,7 @@ export default function AdminDashboard() {
             </>
           ) : (
             <div className="text-center py-16">
-              <p className="text-slate-500 mb-4">Select an event from the Events tab to view registrations</p>
+              <p className="text-slate-500 dark:text-slate-400 mb-4">Select an event from the Events tab to view registrations</p>
               <button onClick={() => setActiveTab('events')} className="btn-primary">Go to Events</button>
             </div>
           )}
@@ -599,16 +769,16 @@ export default function AdminDashboard() {
       {/* Staff Form Modal */}
       {showStaffForm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md animate-slide-up">
-            <div className="flex items-center justify-between p-6 border-b border-slate-100">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-md animate-slide-up">
+            <div className="flex items-center justify-between p-6 border-b border-slate-100 dark:border-slate-700">
               <h2 className="font-display font-bold text-xl">Add Staff Member</h2>
-              <button onClick={() => setShowStaffForm(false)} className="p-2 hover:bg-slate-100 rounded-xl transition-colors">
+              <button onClick={() => setShowStaffForm(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors">
                 <X className="w-5 h-5" />
               </button>
             </div>
             <form onSubmit={createStaff} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Full Name *</label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Full Name *</label>
                 <input
                   type="text"
                   required
@@ -619,7 +789,7 @@ export default function AdminDashboard() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Email *</label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Email *</label>
                 <input
                   type="email"
                   required
@@ -630,7 +800,7 @@ export default function AdminDashboard() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Password *</label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Password *</label>
                 <input
                   type="password"
                   required
@@ -641,7 +811,7 @@ export default function AdminDashboard() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Department *</label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Department *</label>
                 <input
                   type="text"
                   required
@@ -652,7 +822,7 @@ export default function AdminDashboard() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Phone</label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Phone</label>
                 <input
                   type="tel"
                   value={staffFormData.phone}
@@ -670,15 +840,93 @@ export default function AdminDashboard() {
         </div>
       )}
 
+      {/* Coupon Form Modal */}
+      {showCouponForm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-md animate-slide-up">
+            <div className="flex items-center justify-between p-6 border-b border-slate-100 dark:border-slate-700">
+              <h2 className="font-display font-bold text-xl dark:text-slate-100">Create Coupon</h2>
+              <button onClick={() => setShowCouponForm(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={createCoupon} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Coupon Code *</label>
+                <input
+                  type="text"
+                  required
+                  value={couponFormData.code}
+                  onChange={e => setCouponFormData({ ...couponFormData, code: e.target.value })}
+                  className="input"
+                  placeholder="e.g., SUMMER20"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Discount Type *</label>
+                <select
+                  required
+                  value={couponFormData.discountType}
+                  onChange={e => setCouponFormData({ ...couponFormData, discountType: e.target.value })}
+                  className="input"
+                >
+                  <option value="percentage">Percentage</option>
+                  <option value="fixed">Fixed</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Discount Value * {couponFormData.discountType === 'percentage' ? '(%)' : '(₹)'}
+                </label>
+                <input
+                  type="number"
+                  required
+                  min="1"
+                  value={couponFormData.discountValue}
+                  onChange={e => setCouponFormData({ ...couponFormData, discountValue: e.target.value })}
+                  className="input"
+                  placeholder={couponFormData.discountType === 'percentage' ? 'e.g., 20' : 'e.g., 500'}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Max Uses</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={couponFormData.maxUses}
+                  onChange={e => setCouponFormData({ ...couponFormData, maxUses: e.target.value })}
+                  className="input"
+                  placeholder="Leave empty for unlimited"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Expiry Date *</label>
+                <input
+                  type="date"
+                  required
+                  value={couponFormData.expiryDate}
+                  onChange={e => setCouponFormData({ ...couponFormData, expiryDate: e.target.value })}
+                  className="input"
+                />
+              </div>
+              <div className="flex gap-3 pt-4">
+                <button type="submit" className="btn-primary flex-1">Create Coupon</button>
+                <button type="button" onClick={() => setShowCouponForm(false)} className="btn-secondary px-6">Cancel</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Event Form Modal */}
       {showEventForm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col animate-slide-up">
-            <div className="flex items-center justify-between p-6 border-b border-slate-100 shrink-0">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col animate-slide-up">
+            <div className="flex items-center justify-between p-6 border-b border-slate-100 dark:border-slate-700 shrink-0">
               <h2 className="font-display font-bold text-xl">
                 {editingEvent ? 'Edit Event' : 'Create New Event'}
               </h2>
-              <button onClick={() => setShowEventForm(false)} className="p-2 hover:bg-slate-100 rounded-xl transition-colors">
+              <button onClick={() => setShowEventForm(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -688,6 +936,23 @@ export default function AdminDashboard() {
                 onSuccess={() => { setShowEventForm(false); fetchData(); }}
                 onCancel={() => setShowEventForm(false)}
               />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm Modal */}
+      {confirmModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setConfirmModal(null)}>
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-sm w-full mx-4 shadow-xl animate-scale-in" onClick={e => e.stopPropagation()}>
+            <div className="mx-auto w-12 h-12 flex items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30 mb-4">
+              <AlertTriangle className="w-6 h-6 text-red-600 dark:text-red-400" />
+            </div>
+            <h3 className="font-display font-bold text-lg text-slate-900 dark:text-slate-100 mb-2">Are you sure?</h3>
+            <p className="text-slate-600 dark:text-slate-300 text-sm mb-6">{confirmModal.title}</p>
+            <div className="flex gap-3">
+              <button onClick={handleConfirm} className="btn-danger flex-1">Yes, Delete</button>
+              <button onClick={() => setConfirmModal(null)} className="btn-secondary flex-1">No, Cancel</button>
             </div>
           </div>
         </div>
